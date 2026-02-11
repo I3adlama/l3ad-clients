@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSession } from "@/lib/auth";
-import { timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "node:crypto";
+
+// Force Node.js runtime (needed for node:crypto + jose cookies)
+export const runtime = "nodejs";
 
 // In-memory rate limiter (resets on cold start, but blocks brute-force within a deploy)
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -24,7 +27,6 @@ function safeCompare(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
   if (bufA.length !== bufB.length) {
-    // Compare against self to burn the same time, then return false
     timingSafeEqual(bufA, bufA);
     return false;
   }
