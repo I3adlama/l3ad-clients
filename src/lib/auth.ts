@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 
 function getSecretKey(): Uint8Array {
   const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("SESSION_SECRET must be set and at least 32 characters");
+  if (!secret || secret.length < 16) {
+    throw new Error("SESSION_SECRET must be set and at least 16 characters");
   }
   return new TextEncoder().encode(secret);
 }

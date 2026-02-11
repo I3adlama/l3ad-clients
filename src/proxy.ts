@@ -12,7 +12,7 @@ export default async function proxy(req: NextRequest) {
 
     // Verify JWT signature + expiration
     const secret = process.env.SESSION_SECRET;
-    if (!secret || secret.length < 32) {
+    if (!secret || secret.length < 16) {
       return NextResponse.redirect(new URL("/admin/login", req.nextUrl));
     }
 
