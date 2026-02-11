@@ -149,15 +149,15 @@ export function ColorPalettePreview({ colors }: { colors: string[] }) {
 /* ===== Photo Style Previews ===== */
 
 export function PhotoStylePreview({
-  icon,
+  iconClass,
   bgClass,
 }: {
-  icon: string;
+  iconClass: string;
   bgClass: string;
 }) {
   return (
     <div className={`h-full flex items-center justify-center ${bgClass}`}>
-      <span className="text-3xl">{icon}</span>
+      <i className={`bi ${iconClass} text-3xl text-white/80`} />
     </div>
   );
 }

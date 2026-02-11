@@ -56,7 +56,7 @@ export default function LoginPage() {
             <p className="text-[var(--text-soft)] text-sm">Client Intake Admin</p>
           </div>
 
-          <ComicCard variant="quiet">
+          <ComicCard variant="dark">
             <div className="p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>

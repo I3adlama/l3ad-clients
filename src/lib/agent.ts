@@ -60,6 +60,13 @@ export interface PrefillData {
     ideal_customer?: string;
     how_they_find_you?: string[];
   };
+  content_media?: {
+    has_existing_website?: boolean;
+    existing_website_url?: string;
+  };
+  goals?: {
+    competitor_url?: string;
+  };
 }
 
 // ============================================================================
@@ -365,7 +372,7 @@ Return this exact JSON:
   "strengths": ${JSON.stringify(extraction.strengths)},
   "suggested_questions": [
     {
-      "section": "your_story|services|your_customers|content_media|website_features|goals",
+      "section": "your_story|services|your_customers|your_brand|content_media|website_features|goals",
       "question": "conversational question specific to THIS business",
       "why": "why this matters for their website"
     }
@@ -376,22 +383,37 @@ Return this exact JSON:
     },
     "services": {
       "main_services": ["confirmed services"],
+      "specialty": "their primary focus if clear",
       "service_area": "specific area they serve"
     },
     "your_customers": {
       "ideal_customer": "who they serve",
       "how_they_find_you": ["channels they use"]
+    },
+    "content_media": {
+      "has_existing_website": true,
+      "existing_website_url": "their current site URL if found"
+    },
+    "goals": {
+      "competitor_url": "a competitor URL if found in the data"
     }
   }
 }
 
 RULES FOR QUESTIONS:
-- Generate 5-7 questions
+- Generate 5-8 questions across different sections
 - Use the strategist's key questions as starting points: ${plan.key_questions.join("; ")}
 - Questions must be conversational ("Tell us about..." not "Describe your...")
 - Questions must be SPECIFIC to their business — reference their actual services, location, or industry
 - Include questions that probe the data gaps: ${extraction.data_gaps.join(", ")}
-- Each question should help build a website that gets them more customers`);
+- Include at least one "your_brand" question about visual preferences (e.g. dark vs light website, what vibe they want)
+- Each question should help build a website that gets them more customers
+
+RULES FOR PREFILL:
+- Only prefill fields you are CONFIDENT about from the source data
+- For content_media.has_existing_website, set true only if you found an actual website URL
+- For goals.competitor_url, only include if a competitor was explicitly mentioned
+- Wrong prefill is worse than no prefill — when in doubt, leave it out`);
 
   return parseJSON<BusinessAnalysis>(text);
 }

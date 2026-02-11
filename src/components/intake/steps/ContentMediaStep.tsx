@@ -14,25 +14,25 @@ const PHOTO_STYLES = [
     value: "real-authentic",
     label: "Real & Authentic",
     description: "Real photos of your actual work, no stock images",
-    preview: <PhotoStylePreview icon="📸" bgClass="bg-amber-900/30" />,
+    preview: <PhotoStylePreview iconClass="bi-camera-fill" bgClass="bg-amber-900/30" />,
   },
   {
     value: "polished-professional",
     label: "Polished & Professional",
     description: "Clean, well-lit, magazine quality shots",
-    preview: <PhotoStylePreview icon="✨" bgClass="bg-blue-900/30" />,
+    preview: <PhotoStylePreview iconClass="bi-stars" bgClass="bg-blue-900/30" />,
   },
   {
     value: "action-shots",
     label: "Action Shots",
     description: "Your team in action, on the job site",
-    preview: <PhotoStylePreview icon="🔨" bgClass="bg-orange-900/30" />,
+    preview: <PhotoStylePreview iconClass="bi-hammer" bgClass="bg-orange-900/30" />,
   },
   {
     value: "before-after",
     label: "Before & After",
     description: "Show the transformation, the results",
-    preview: <PhotoStylePreview icon="🔄" bgClass="bg-green-900/30" />,
+    preview: <PhotoStylePreview iconClass="bi-arrow-repeat" bgClass="bg-green-900/30" />,
   },
 ];
 

@@ -136,7 +136,7 @@ export default function IntakeWizard({
 
           <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />
 
-          <ComicCard variant="quiet">
+          <ComicCard variant="dark">
             <div className={`p-5 sm:p-6 ${animClass}`}>
               {currentStep === 0 && (
                 <YourStoryStep

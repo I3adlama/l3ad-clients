@@ -288,6 +288,51 @@
 }
 
 /* ============================================================================
+   VARIANT: DARK — Inverted palette for dark-themed content
+   Keeps the comic panel aesthetic (octagonal shape, halftone, corners)
+   while matching the noir color scheme for readable form content.
+   ============================================================================ */
+
+.comic-card--dark {
+  --paper-color: #111;
+  --dot-opacity: 0.05;
+  --dot-spacing: 5px;
+  --corner-thickness: 2px;
+
+  background: #1a1a1a;
+  border-color: rgba(0, 240, 208, 0.25);
+  filter: drop-shadow(3px 3px 0 rgba(0, 240, 208, 0.1));
+}
+
+.comic-card--dark::before {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Invert halftone dots to white */
+.comic-card--dark::after {
+  background-image: radial-gradient(
+    circle at center,
+    #fff var(--dot-size),
+    transparent var(--dot-size)
+  );
+}
+
+.comic-card--dark .comic-card__corner {
+  border-color: rgba(0, 240, 208, 0.2);
+}
+
+/* No burst rays */
+.comic-card--dark .comic-card__content::before {
+  display: none;
+}
+
+/* Floating shadow for dark cards */
+.comic-card--dark.comic-card--floating {
+  filter: drop-shadow(4px 4px 0 rgba(0, 240, 208, 0.2))
+          drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.6));
+}
+
+/* ============================================================================
    RESPONSIVE ADJUSTMENTS
    ============================================================================ */
 
@@ -308,6 +353,15 @@
 
   .comic-card--quiet.comic-card--floating {
     filter: drop-shadow(4px 4px 0 #000);
+  }
+
+  .comic-card--dark {
+    filter: drop-shadow(2px 2px 0 rgba(0, 240, 208, 0.08));
+  }
+
+  .comic-card--dark.comic-card--floating {
+    filter: drop-shadow(3px 3px 0 rgba(0, 240, 208, 0.15))
+            drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.5));
   }
 
   .comic-card--accent {
