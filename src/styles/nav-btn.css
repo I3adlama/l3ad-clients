@@ -1,0 +1,239 @@
+/* ============================================================================
+   NAV BEVELED BUTTON — Retro bevel with clip-path octagon
+   3-layer system: outline (white) -> shadow (black) -> inside (face)
+   Hover: inside lifts up-left, revealing shadow; bg changes to color + dots
+   ============================================================================ */
+
+/* Horizontal dot scroll — scrolls the two offset dot grids left */
+@keyframes nav-btn-dots {
+  to { background-position-x: 0, -6px, -3px; }
+}
+
+/* ---- Wrapper ---- */
+.nav-btn {
+  --btn-color: #00f0d0;
+  --btn-color-fade: rgba(0, 240, 208, 0.9);
+  --btn-dots: #5eead4;
+  --bevel: 3px;
+  --border-w: 3px;
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.95));
+  font-family: var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+/* Secondary (white) variant */
+.nav-btn--secondary {
+  --btn-color: #fff;
+  --btn-color-fade: rgba(255, 255, 255, 0.9);
+  --btn-dots: #d4d4d4;
+}
+
+/* Pink variant */
+.nav-btn--pink {
+  --btn-color: #ec4899;
+  --btn-color-fade: rgba(236, 72, 153, 0.9);
+  --btn-dots: #f9a8d4;
+}
+
+/* Black variant */
+.nav-btn--black {
+  --btn-color: #00f0d0;
+  --btn-color-fade: rgba(0, 240, 208, 0.9);
+  --btn-dots: #009985;
+  filter: drop-shadow(1px 1px 1px rgba(0, 240, 208, 0.6));
+}
+
+.nav-btn--black .nav-btn__inside {
+  background: #000;
+  color: white;
+}
+
+.nav-btn.nav-btn--black:hover .nav-btn__inside,
+.nav-btn.nav-btn--black:hover .nav-btn__inside span,
+.nav-btn.nav-btn--black:hover .nav-btn__inside svg {
+  color: black;
+}
+
+/* ---- Shared layer base ---- */
+.nav-btn__outline,
+.nav-btn__shadow,
+.nav-btn__inside {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Full width ---- */
+.nav-btn--full {
+  display: flex;
+  width: 100%;
+}
+.nav-btn--full .nav-btn__outline,
+.nav-btn--full .nav-btn__shadow,
+.nav-btn--full .nav-btn__inside {
+  width: 100%;
+}
+
+/* ---- Layer 1: Outline (outermost white border) ---- */
+.nav-btn__outline {
+  background: #fff;
+  padding: var(--border-w);
+  margin-top: calc(var(--border-w) * -1);
+  margin-left: calc(var(--border-w) * -1);
+  clip-path: polygon(
+    9.51px 3px,
+    calc(100% - 9.51px) 3px,
+    100% 12.51px,
+    100% calc(100% - 6.51px),
+    calc(100% - 6.51px) 100%,
+    12.51px 100%,
+    3px calc(100% - 9.51px),
+    3px 9.51px
+  );
+  transition: clip-path 0.2s;
+}
+
+/* ---- Layer 2: Shadow (black, revealed when inside lifts) ---- */
+.nav-btn__shadow {
+  background: #000;
+  padding: calc(var(--border-w) * 2);
+  clip-path: polygon(
+    7.76px 3px,
+    calc(100% - 7.76px) 3px,
+    100% 10.76px,
+    100% calc(100% - 4.76px),
+    calc(100% - 4.76px) 100%,
+    10.76px 100%,
+    3px calc(100% - 7.76px),
+    3px 7.76px
+  );
+  transition: clip-path 0.2s;
+}
+
+/* ---- Layer 3: Inside (visible face) ---- */
+.nav-btn__inside {
+  background: var(--accent);
+  padding: 12px 24px;
+  clip-path: polygon(
+    var(--bevel) 0,
+    calc(100% - var(--bevel)) 0,
+    100% var(--bevel),
+    100% calc(100% - var(--bevel)),
+    calc(100% - var(--bevel)) 100%,
+    var(--bevel) 100%,
+    0 calc(100% - var(--bevel)),
+    0 var(--bevel)
+  );
+  transition: transform 0.2s;
+  position: relative;
+  overflow: hidden;
+  gap: 6px;
+  white-space: nowrap;
+  color: #000;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.nav-btn--secondary .nav-btn__inside {
+  background: #fff;
+  color: #000;
+}
+
+/* ---- Size: Small ---- */
+.nav-btn--sm .nav-btn__inside {
+  padding: 8px 16px;
+  font-size: 0.75rem;
+}
+
+/* ---- Size: Large ---- */
+.nav-btn--lg .nav-btn__inside {
+  padding: 16px 32px;
+  font-size: 1rem;
+}
+
+/* ---- Hover: bg always changes ---- */
+.nav-btn:hover .nav-btn__inside {
+  background-color: var(--btn-color);
+  background-image:
+    linear-gradient(to right, transparent, var(--btn-color-fade)),
+    radial-gradient(var(--btn-dots) 1px, transparent 0),
+    radial-gradient(var(--btn-dots) 1px, transparent 0);
+  background-size: auto, 6px 6px, 6px 6px;
+  background-position: 0 0, 0 0, 3px 3px;
+  animation: nav-btn-dots 1s linear infinite;
+}
+
+/* ---- Hover (not pressing): inside lifts, layers expand ---- */
+.nav-btn:hover:not(:active) .nav-btn__inside {
+  transform: translate(calc(var(--border-w) * -1), calc(var(--border-w) * -1));
+}
+
+.nav-btn:hover:not(:active) .nav-btn__outline {
+  clip-path: polygon(
+    6.51px 0,
+    calc(100% - 12.51px) 0,
+    100% 12.51px,
+    100% calc(100% - 6.51px),
+    calc(100% - 6.51px) 100%,
+    12.51px 100%,
+    0 calc(100% - 12.51px),
+    0 6.51px
+  );
+}
+
+.nav-btn:hover:not(:active) .nav-btn__shadow {
+  clip-path: polygon(
+    4.76px 0,
+    calc(100% - 10.76px) 0,
+    100% 10.76px,
+    100% calc(100% - 4.76px),
+    calc(100% - 4.76px) 100%,
+    10.76px 100%,
+    0 calc(100% - 10.76px),
+    0 4.76px
+  );
+}
+
+/* ---- Disabled ---- */
+.nav-btn:disabled,
+.nav-btn--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .nav-btn:hover .nav-btn__inside {
+    animation: none;
+  }
+  .nav-btn__inside,
+  .nav-btn__outline,
+  .nav-btn__shadow {
+    transition: none !important;
+  }
+}
+
+/* ---- CTA mobile fix ---- */
+@media (max-width: 639px) {
+  .cta-btn-wrap > * {
+    max-width: 100%;
+  }
+  .cta-btn-wrap .nav-btn,
+  .cta-btn-wrap .nav-btn__outline,
+  .cta-btn-wrap .nav-btn__shadow {
+    max-width: 100%;
+  }
+  .cta-btn-wrap .nav-btn__inside {
+    white-space: normal;
+    text-align: center;
+  }
+  .cta-btn-wrap .nav-btn--lg .nav-btn__inside {
+    padding: 14px 20px;
+  }
+}

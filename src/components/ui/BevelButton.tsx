@@ -25,15 +25,15 @@ export default function BevelButton({
   disabled = false,
   onClick,
 }: BevelButtonProps) {
-  const variantClass = variant === "secondary" ? "bevel-btn--secondary" : "";
-  const sizeClass = size !== "md" ? `bevel-btn--${size}` : "";
-  const fullClass = full ? "bevel-btn--full" : "";
+  const variantClass = variant === "secondary" ? "nav-btn--secondary" : "";
+  const sizeClass = size !== "md" ? `nav-btn--${size}` : "";
+  const fullClass = full ? "nav-btn--full" : "";
 
   const inner = (
-    <span className={`bevel-btn ${variantClass} ${sizeClass} ${fullClass}`.trim()}>
-      <span className="bevel-btn__outline">
-        <span className="bevel-btn__shadow">
-          <span className="bevel-btn__inside">{children}</span>
+    <span className={`nav-btn ${variantClass} ${sizeClass} ${fullClass}`.trim()}>
+      <span className="nav-btn__outline">
+        <span className="nav-btn__shadow">
+          <span className="nav-btn__inside">{children}</span>
         </span>
       </span>
     </span>

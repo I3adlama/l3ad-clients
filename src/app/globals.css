@@ -22,6 +22,8 @@
 }
 
 @import "tailwindcss";
+@import "../styles/comic-card.css";
+@import "../styles/nav-btn.css";
 
 @theme {
   --font-display: 'TreasureTimes', Georgia, serif;
@@ -66,6 +68,7 @@
   --border-accent: rgba(0,240,208,0.4);
   --accent: #00f0d0;
   --accent-bright: #00fff0;
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -105,6 +108,59 @@ a, button {
 }
 
 /* ============================================================================
+   HALFTONE BACKGROUND — Manga-style screentone + speed lines
+   ============================================================================ */
+
+.halftone-bg {
+  background-color: #000;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Manga-style screentone halftone dots */
+.halftone-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 6px 6px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(
+    ellipse 70% 60% at center,
+    transparent 25%,
+    rgba(0,0,0,0.3) 50%,
+    black 80%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 60% at center,
+    transparent 25%,
+    rgba(0,0,0,0.3) 50%,
+    black 80%
+  );
+}
+
+/* Diagonal speed lines overlay */
+.halftone-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.03) 2px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================================
    NOIR PANEL
    ============================================================================ */
 
@@ -116,186 +172,6 @@ a, button {
 
 .noir-panel--accent {
   border-color: var(--border-accent);
-}
-
-/* ============================================================================
-   BEVEL BUTTON
-   ============================================================================ */
-
-@keyframes bevel-dots {
-  to { background-position-x: 0, -6px, -3px; }
-}
-
-.bevel-btn {
-  --btn-color: #00f0d0;
-  --btn-color-fade: rgba(0, 240, 208, 0.9);
-  --btn-dots: #5eead4;
-  --bevel: 3px;
-  --border-w: 3px;
-  position: relative;
-  display: inline-flex;
-  cursor: pointer;
-  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.95));
-  font-family: var(--font-ui);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  text-decoration: none;
-}
-
-.bevel-btn--secondary {
-  --btn-color: #fff;
-  --btn-color-fade: rgba(255, 255, 255, 0.9);
-  --btn-dots: #d4d4d4;
-}
-
-.bevel-btn--full {
-  display: flex;
-  width: 100%;
-}
-
-.bevel-btn__outline,
-.bevel-btn__shadow,
-.bevel-btn__inside {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bevel-btn--full .bevel-btn__outline,
-.bevel-btn--full .bevel-btn__shadow,
-.bevel-btn--full .bevel-btn__inside {
-  width: 100%;
-}
-
-.bevel-btn__outline {
-  background: #fff;
-  padding: var(--border-w);
-  margin-top: calc(var(--border-w) * -1);
-  margin-left: calc(var(--border-w) * -1);
-  clip-path: polygon(
-    9.51px 3px,
-    calc(100% - 9.51px) 3px,
-    100% 12.51px,
-    100% calc(100% - 6.51px),
-    calc(100% - 6.51px) 100%,
-    12.51px 100%,
-    3px calc(100% - 9.51px),
-    3px 9.51px
-  );
-  transition: clip-path 0.2s;
-}
-
-.bevel-btn__shadow {
-  background: #000;
-  padding: calc(var(--border-w) * 2);
-  clip-path: polygon(
-    7.76px 3px,
-    calc(100% - 7.76px) 3px,
-    100% 10.76px,
-    100% calc(100% - 4.76px),
-    calc(100% - 4.76px) 100%,
-    10.76px 100%,
-    3px calc(100% - 7.76px),
-    3px 7.76px
-  );
-  transition: clip-path 0.2s;
-}
-
-.bevel-btn__inside {
-  background: var(--accent);
-  padding: 12px 24px;
-  clip-path: polygon(
-    var(--bevel) 0,
-    calc(100% - var(--bevel)) 0,
-    100% var(--bevel),
-    100% calc(100% - var(--bevel)),
-    calc(100% - var(--bevel)) 100%,
-    var(--bevel) 100%,
-    0 calc(100% - var(--bevel)),
-    0 var(--bevel)
-  );
-  transition: transform 0.2s;
-  position: relative;
-  overflow: hidden;
-  gap: 6px;
-  white-space: nowrap;
-  color: #000;
-  font-weight: 400;
-  font-size: 0.875rem;
-}
-
-.bevel-btn--secondary .bevel-btn__inside {
-  background: #fff;
-  color: #000;
-}
-
-.bevel-btn--sm .bevel-btn__inside {
-  padding: 8px 16px;
-  font-size: 0.75rem;
-}
-
-.bevel-btn--lg .bevel-btn__inside {
-  padding: 16px 32px;
-  font-size: 1rem;
-}
-
-.bevel-btn:hover .bevel-btn__inside {
-  background-color: var(--btn-color);
-  background-image:
-    linear-gradient(to right, transparent, var(--btn-color-fade)),
-    radial-gradient(var(--btn-dots) 1px, transparent 0),
-    radial-gradient(var(--btn-dots) 1px, transparent 0);
-  background-size: auto, 6px 6px, 6px 6px;
-  background-position: 0 0, 0 0, 3px 3px;
-  animation: bevel-dots 1s linear infinite;
-}
-
-.bevel-btn:hover:not(:active) .bevel-btn__inside {
-  transform: translate(calc(var(--border-w) * -1), calc(var(--border-w) * -1));
-}
-
-.bevel-btn:hover:not(:active) .bevel-btn__outline {
-  clip-path: polygon(
-    6.51px 0,
-    calc(100% - 12.51px) 0,
-    100% 12.51px,
-    100% calc(100% - 6.51px),
-    calc(100% - 6.51px) 100%,
-    12.51px 100%,
-    0 calc(100% - 12.51px),
-    0 6.51px
-  );
-}
-
-.bevel-btn:hover:not(:active) .bevel-btn__shadow {
-  clip-path: polygon(
-    4.76px 0,
-    calc(100% - 10.76px) 0,
-    100% 10.76px,
-    100% calc(100% - 4.76px),
-    calc(100% - 4.76px) 100%,
-    10.76px 100%,
-    0 calc(100% - 10.76px),
-    0 4.76px
-  );
-}
-
-.bevel-btn:disabled,
-.bevel-btn--disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bevel-btn:hover .bevel-btn__inside {
-    animation: none;
-  }
-  .bevel-btn__inside,
-  .bevel-btn__outline,
-  .bevel-btn__shadow {
-    transition: none !important;
-  }
 }
 
 /* ============================================================================
@@ -359,6 +235,47 @@ a, button {
 .step-enter-back {
   opacity: 0;
   transform: translateX(-40px);
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* Scroll-triggered animations */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.8s var(--ease-premium),
+    transform 0.8s var(--ease-premium);
+}
+
+.animate-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.animate-on-scroll.delay-1 { transition-delay: 0.1s; }
+.animate-on-scroll.delay-2 { transition-delay: 0.2s; }
+.animate-on-scroll.delay-3 { transition-delay: 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-on-scroll {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* ============================================================================

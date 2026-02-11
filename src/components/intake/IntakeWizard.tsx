@@ -3,11 +3,15 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { IntakeResponses } from "@/lib/types";
 import { STEP_SECTIONS } from "@/lib/types";
+import AppShell from "@/components/layout/AppShell";
+import Header from "@/components/layout/Header";
+import ComicFooter from "@/components/layout/ComicFooter";
+import ComicCard from "@/components/ui/ComicCard";
 import ProgressBar from "@/components/ui/ProgressBar";
 import YourStoryStep from "./steps/YourStoryStep";
 import ServicesStep from "./steps/ServicesStep";
 import YourCustomersStep from "./steps/YourCustomersStep";
-import LookAndFeelStep from "./steps/LookAndFeelStep";
+import YourBrandStep from "./steps/YourBrandStep";
 import ContentMediaStep from "./steps/ContentMediaStep";
 import WebsiteFeaturesStep from "./steps/WebsiteFeaturesStep";
 import GoalsStep from "./steps/GoalsStep";
@@ -17,6 +21,7 @@ interface IntakeWizardProps {
   clientName: string;
   initialResponses: IntakeResponses;
   initialStep: number;
+  aiServices?: string[];
 }
 
 export default function IntakeWizard({
@@ -24,6 +29,7 @@ export default function IntakeWizard({
   clientName,
   initialResponses,
   initialStep,
+  aiServices,
 }: IntakeWizardProps) {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [responses, setResponses] = useState<IntakeResponses>(initialResponses);
@@ -115,96 +121,105 @@ export default function IntakeWizard({
   }, [currentStep, responses, slug]);
 
   return (
-    <div className="min-h-screen" ref={containerRef}>
-      <div className="max-w-lg mx-auto px-4 py-6 sm:py-10">
-        <div className="mb-6 text-center">
-          <h1 className="font-display text-2xl sm:text-3xl">
-            Welcome, {clientName}
-          </h1>
-          <p className="text-[var(--text-soft)] text-sm mt-1">
-            Let&apos;s build something great together.
+    <AppShell>
+      <Header />
+      <div className="min-h-screen" ref={containerRef}>
+        <div className="max-w-lg mx-auto px-4 py-6 sm:py-10">
+          <div className="mb-6 text-center">
+            <h1 className="font-display text-2xl sm:text-3xl">
+              Welcome, {clientName}
+            </h1>
+            <p className="text-[var(--text-soft)] text-sm mt-1">
+              Let&apos;s build something great together.
+            </p>
+          </div>
+
+          <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />
+
+          <ComicCard variant="quiet">
+            <div className={`p-5 sm:p-6 ${animClass}`}>
+              {currentStep === 0 && (
+                <YourStoryStep
+                  data={responses.your_story || {}}
+                  onChange={(d) => updateSection("your_story", d)}
+                  onNext={handleNext}
+                  isSaving={isSaving}
+                />
+              )}
+              {currentStep === 1 && (
+                <ServicesStep
+                  data={responses.services || {}}
+                  onChange={(d) => updateSection("services", d)}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  isSaving={isSaving}
+                  aiServices={aiServices}
+                />
+              )}
+              {currentStep === 2 && (
+                <YourCustomersStep
+                  data={responses.your_customers || {}}
+                  onChange={(d) => updateSection("your_customers", d)}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  isSaving={isSaving}
+                />
+              )}
+              {currentStep === 3 && (
+                <YourBrandStep
+                  data={responses.your_brand || {}}
+                  onChange={(d) => updateSection("your_brand", d)}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  isSaving={isSaving}
+                  slug={slug}
+                />
+              )}
+              {currentStep === 4 && (
+                <ContentMediaStep
+                  data={responses.content_media || {}}
+                  onChange={(d) => updateSection("content_media", d)}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  isSaving={isSaving}
+                  slug={slug}
+                />
+              )}
+              {currentStep === 5 && (
+                <WebsiteFeaturesStep
+                  data={responses.website_features || {}}
+                  onChange={(d) => updateSection("website_features", d)}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  isSaving={isSaving}
+                />
+              )}
+              {currentStep === 6 && (
+                <GoalsStep
+                  data={responses.goals || {}}
+                  onChange={(d) => updateSection("goals", d)}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  isSaving={isSaving}
+                />
+              )}
+            </div>
+          </ComicCard>
+
+          <p className="text-center text-[var(--text-soft)] text-xs mt-6">
+            Powered by{" "}
+            <a
+              href="https://l3adsolutions.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:text-accent-bright"
+            >
+              L3ad Solutions
+            </a>
           </p>
         </div>
-
-        <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />
-
-        <div className={`noir-panel p-5 sm:p-6 ${animClass}`}>
-          {currentStep === 0 && (
-            <YourStoryStep
-              data={responses.your_story || {}}
-              onChange={(d) => updateSection("your_story", d)}
-              onNext={handleNext}
-              isSaving={isSaving}
-            />
-          )}
-          {currentStep === 1 && (
-            <ServicesStep
-              data={responses.services || {}}
-              onChange={(d) => updateSection("services", d)}
-              onNext={handleNext}
-              onBack={handleBack}
-              isSaving={isSaving}
-            />
-          )}
-          {currentStep === 2 && (
-            <YourCustomersStep
-              data={responses.your_customers || {}}
-              onChange={(d) => updateSection("your_customers", d)}
-              onNext={handleNext}
-              onBack={handleBack}
-              isSaving={isSaving}
-            />
-          )}
-          {currentStep === 3 && (
-            <LookAndFeelStep
-              data={responses.look_and_feel || {}}
-              onChange={(d) => updateSection("look_and_feel", d)}
-              onNext={handleNext}
-              onBack={handleBack}
-              isSaving={isSaving}
-            />
-          )}
-          {currentStep === 4 && (
-            <ContentMediaStep
-              data={responses.content_media || {}}
-              onChange={(d) => updateSection("content_media", d)}
-              onNext={handleNext}
-              onBack={handleBack}
-              isSaving={isSaving}
-            />
-          )}
-          {currentStep === 5 && (
-            <WebsiteFeaturesStep
-              data={responses.website_features || {}}
-              onChange={(d) => updateSection("website_features", d)}
-              onNext={handleNext}
-              onBack={handleBack}
-              isSaving={isSaving}
-            />
-          )}
-          {currentStep === 6 && (
-            <GoalsStep
-              data={responses.goals || {}}
-              onChange={(d) => updateSection("goals", d)}
-              onNext={handleNext}
-              onBack={handleBack}
-              isSaving={isSaving}
-            />
-          )}
-        </div>
-
-        <p className="text-center text-[var(--text-soft)] text-xs mt-6">
-          Powered by{" "}
-          <a
-            href="https://l3adsolutions.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:text-accent-bright"
-          >
-            L3ad Solutions
-          </a>
-        </p>
       </div>
-    </div>
+      <ComicFooter />
+    </AppShell>
   );
 }

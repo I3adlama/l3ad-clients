@@ -16,6 +16,14 @@ export interface SocialUrl {
   url: string;
 }
 
+export interface UploadedFile {
+  url: string;
+  filename: string;
+  size: number;
+  content_type: string;
+  uploaded_at: string;
+}
+
 export interface IntakeResponse {
   id: string;
   project_id: string;
@@ -35,14 +43,29 @@ export interface IntakeResponses {
   };
   services?: {
     main_services?: string[];
+    verified_services?: string[];
+    additional_services?: string[];
     specialty?: string;
     service_area?: string;
+    wants_pricing_research?: boolean;
+    target_margin?: string;
   };
   your_customers?: {
     ideal_customer?: string;
     how_they_find_you?: string[];
     want_more_of?: string;
   };
+  your_brand?: {
+    dark_or_light?: string;
+    brand_personality?: string[];
+    has_brand_colors?: boolean;
+    brand_colors?: string[];
+    website_style?: string;
+    color_mood?: string;
+    inspiration_urls?: string[];
+    uploads?: UploadedFile[];
+  };
+  /** @deprecated Use your_brand instead */
   look_and_feel?: {
     website_style?: string;
     color_mood?: string;
@@ -52,6 +75,10 @@ export interface IntakeResponses {
     has_photos?: string;
     has_logo?: string;
     has_videos?: string;
+    photo_style?: string;
+    has_existing_website?: boolean;
+    existing_website_url?: string;
+    work_photo_uploads?: UploadedFile[];
     other_content?: string;
   };
   website_features?: {
@@ -61,6 +88,8 @@ export interface IntakeResponses {
   goals?: {
     primary_goal?: string;
     timeline?: string;
+    websites_admired?: string;
+    competitor_url?: string;
     anything_else?: string;
   };
 }
@@ -84,7 +113,7 @@ export const STEP_SECTIONS: (keyof IntakeResponses)[] = [
   "your_story",
   "services",
   "your_customers",
-  "look_and_feel",
+  "your_brand",
   "content_media",
   "website_features",
   "goals",
@@ -94,7 +123,7 @@ export const STEP_LABELS = [
   "Your Story",
   "Services",
   "Your Customers",
-  "Look & Feel",
+  "Your Brand",
   "Content & Media",
   "Website Features",
   "Goals",

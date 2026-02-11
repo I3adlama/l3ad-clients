@@ -24,7 +24,7 @@ export default async function IntakePage({ params }: PageProps) {
   const sql = getDb();
 
   const projects = await sql`
-    SELECT p.*, ir.responses, ir.current_step, ir.completed
+    SELECT p.*, ir.responses, ir.current_step, ir.completed, p.ai_analysis
     FROM projects p
     LEFT JOIN intake_responses ir ON ir.project_id = p.id
     WHERE p.slug = ${slug}
@@ -49,12 +49,16 @@ export default async function IntakePage({ params }: PageProps) {
     );
   }
 
+  // Extract AI-discovered services if analysis exists
+  const aiServices: string[] = project.ai_analysis?.services || [];
+
   return (
     <IntakeWizard
       slug={slug}
       clientName={project.client_name}
       initialResponses={project.responses || {}}
       initialStep={project.current_step || 0}
+      aiServices={aiServices.length > 0 ? aiServices : undefined}
     />
   );
 }

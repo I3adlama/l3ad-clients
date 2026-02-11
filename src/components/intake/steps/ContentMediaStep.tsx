@@ -1,13 +1,49 @@
 "use client";
 
+import { useState } from "react";
 import RadioGroup from "@/components/ui/RadioGroup";
 import TextArea from "@/components/ui/TextArea";
+import TextInput from "@/components/ui/TextInput";
+import FileUpload from "@/components/ui/FileUpload";
 import StepWrapper from "../StepWrapper";
+import StylePicker, { PhotoStylePreview } from "../StylePicker";
+import type { UploadedFile } from "@/lib/types";
+
+const PHOTO_STYLES = [
+  {
+    value: "real-authentic",
+    label: "Real & Authentic",
+    description: "Real photos of your actual work, no stock images",
+    preview: <PhotoStylePreview icon="📸" bgClass="bg-amber-900/30" />,
+  },
+  {
+    value: "polished-professional",
+    label: "Polished & Professional",
+    description: "Clean, well-lit, magazine quality shots",
+    preview: <PhotoStylePreview icon="✨" bgClass="bg-blue-900/30" />,
+  },
+  {
+    value: "action-shots",
+    label: "Action Shots",
+    description: "Your team in action, on the job site",
+    preview: <PhotoStylePreview icon="🔨" bgClass="bg-orange-900/30" />,
+  },
+  {
+    value: "before-after",
+    label: "Before & After",
+    description: "Show the transformation, the results",
+    preview: <PhotoStylePreview icon="🔄" bgClass="bg-green-900/30" />,
+  },
+];
 
 interface ContentMediaData {
   has_photos?: string;
   has_logo?: string;
   has_videos?: string;
+  photo_style?: string;
+  has_existing_website?: boolean;
+  existing_website_url?: string;
+  work_photo_uploads?: UploadedFile[];
   other_content?: string;
 }
 
@@ -17,10 +53,13 @@ interface Props {
   onNext: () => void;
   onBack: () => void;
   isSaving: boolean;
+  slug: string;
 }
 
-export default function ContentMediaStep({ data, onChange, onNext, onBack, isSaving }: Props) {
-  function update(field: keyof ContentMediaData, value: string) {
+export default function ContentMediaStep({ data, onChange, onNext, onBack, isSaving, slug }: Props) {
+  const [hasWebsite, setHasWebsite] = useState(data.has_existing_website ?? false);
+
+  function update<K extends keyof ContentMediaData>(field: K, value: ContentMediaData[K]) {
     onChange({ ...data, [field]: value });
   }
 
@@ -34,6 +73,52 @@ export default function ContentMediaStep({ data, onChange, onNext, onBack, isSav
       isLast={false}
       isSaving={isSaving}
     >
+      {/* Existing website */}
+      <div>
+        <span className="input-label">Do you have an existing website?</span>
+        <div className="flex gap-2 mt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setHasWebsite(true);
+              update("has_existing_website", true);
+            }}
+            className={`px-4 py-2 rounded-md border text-sm transition-colors ${
+              hasWebsite
+                ? "border-[var(--border-accent)] bg-accent/5 text-white"
+                : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
+            }`}
+          >
+            Yes
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setHasWebsite(false);
+              update("has_existing_website", false);
+              update("existing_website_url", "");
+            }}
+            className={`px-4 py-2 rounded-md border text-sm transition-colors ${
+              !hasWebsite && data.has_existing_website !== undefined
+                ? "border-[var(--border-accent)] bg-accent/5 text-white"
+                : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
+            }`}
+          >
+            No
+          </button>
+        </div>
+      </div>
+
+      {hasWebsite && (
+        <TextInput
+          label="What's the URL?"
+          value={data.existing_website_url || ""}
+          onChange={(v) => update("existing_website_url", v)}
+          placeholder="https://your-current-site.com"
+          name="existing_website_url"
+        />
+      )}
+
       <RadioGroup
         label="Do you have photos of your work?"
         options={[
@@ -43,6 +128,13 @@ export default function ContentMediaStep({ data, onChange, onNext, onBack, isSav
         ]}
         selected={data.has_photos || ""}
         onChange={(v) => update("has_photos", v)}
+      />
+
+      <StylePicker
+        label="What kind of photos represent your work best?"
+        options={PHOTO_STYLES}
+        selected={data.photo_style || ""}
+        onSelect={(v) => update("photo_style", v)}
       />
 
       <RadioGroup
@@ -64,6 +156,15 @@ export default function ContentMediaStep({ data, onChange, onNext, onBack, isSav
         ]}
         selected={data.has_videos || ""}
         onChange={(v) => update("has_videos", v)}
+      />
+
+      <FileUpload
+        label="Upload work photos (up to 5)"
+        files={data.work_photo_uploads || []}
+        onChange={(f) => update("work_photo_uploads", f)}
+        uploadUrl={`/api/intake/${slug}/upload`}
+        max={5}
+        accept="image/*"
       />
 
       <TextArea

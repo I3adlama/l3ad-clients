@@ -1,12 +1,15 @@
 "use client";
 
 import TextArea from "@/components/ui/TextArea";
+import TextInput from "@/components/ui/TextInput";
 import RadioGroup from "@/components/ui/RadioGroup";
 import StepWrapper from "../StepWrapper";
 
 interface GoalsData {
   primary_goal?: string;
   timeline?: string;
+  websites_admired?: string;
+  competitor_url?: string;
   anything_else?: string;
 }
 
@@ -54,10 +57,27 @@ export default function GoalsStep({ data, onChange, onNext, onBack, isSaving }: 
       />
 
       <TextArea
+        label="Are there any websites you really admire? What do you like about them?"
+        value={data.websites_admired || ""}
+        onChange={(v) => update("websites_admired", v)}
+        placeholder="A competitor's site, a brand you love, anything that caught your eye..."
+        name="websites_admired"
+        rows={3}
+      />
+
+      <TextInput
+        label="Who's your biggest competitor? (website URL if you have it)"
+        value={data.competitor_url || ""}
+        onChange={(v) => update("competitor_url", v)}
+        placeholder="https://competitor.com or just their name"
+        name="competitor_url"
+      />
+
+      <TextArea
         label="Anything else we should know?"
         value={data.anything_else || ""}
         onChange={(v) => update("anything_else", v)}
-        placeholder="Anything at all — competitors you like, things you hate, pet peeves with websites..."
+        placeholder="Things you hate about websites, pet peeves, must-haves..."
         name="anything_else"
         rows={3}
       />

@@ -1,0 +1,332 @@
+/* ============================================================================
+   COMIC CARD COMPONENT - Premium Manga/Anime Style
+   Pure CSS with layered effects, no images required
+   ============================================================================ */
+
+.comic-card {
+  /* CSS Custom Properties for easy tuning */
+  --frame-thickness: 3px;
+  --outline-w: 2px;
+  --paper-color: #fafafa;
+  --ink-color: #000;
+  --accent-color: #00f0d0;
+
+  /* Dot pattern settings */
+  --dot-size: 1px;
+  --dot-spacing: 5px;
+  --dot-opacity: 0.35;
+  --dot-fade-strength: 85%;
+
+  /* Burst ray settings */
+  --ray-count: 60;
+  --ray-thickness: 1px;
+  --ray-opacity: 0.06;
+  --ray-safe-center: 60%;
+
+  /* Corner bracket size */
+  --corner-size: 16px;
+  --corner-thickness: 3px;
+
+  /* Octagonal bevel — matches bevel button geometry */
+  --card-bevel: 10px;
+
+  position: relative;
+  background: var(--ink-color);
+  border: var(--outline-w) solid white;
+  clip-path: polygon(
+    var(--card-bevel) 0,
+    calc(100% - var(--card-bevel)) 0,
+    100% var(--card-bevel),
+    100% calc(100% - var(--card-bevel)),
+    calc(100% - var(--card-bevel)) 100%,
+    var(--card-bevel) 100%,
+    0 calc(100% - var(--card-bevel)),
+    0 var(--card-bevel)
+  );
+  overflow: hidden;
+  isolation: isolate;
+
+  /* Premium smooth transitions */
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Floating shadow effect — drop-shadow respects clip-path */
+.comic-card--floating {
+  filter:
+    drop-shadow(4px 4px 0 var(--accent-color))
+    drop-shadow(2px 2px 0 var(--ink-color));
+}
+
+/* Paper-color face + inner frame line (layered border effect) */
+.comic-card::before {
+  content: "";
+  position: absolute;
+  inset: var(--frame-thickness);
+  background: var(--paper-color);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Halftone dot pattern - fades toward center */
+.comic-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at center,
+    var(--ink-color) var(--dot-size),
+    transparent var(--dot-size)
+  );
+  background-size: var(--dot-spacing) var(--dot-spacing);
+  opacity: var(--dot-opacity);
+  pointer-events: none;
+  z-index: 2;
+  /* Dots only at the very edges — wide clear center for text readability */
+  mask-image: radial-gradient(
+    ellipse 85% 80% at center,
+    transparent 55%,
+    rgba(0,0,0,0.2) 75%,
+    black var(--dot-fade-strength)
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 85% 80% at center,
+    transparent 55%,
+    rgba(0,0,0,0.2) 75%,
+    black var(--dot-fade-strength)
+  );
+}
+
+/* Corner brackets */
+.comic-card__corner {
+  position: absolute;
+  width: var(--corner-size);
+  height: var(--corner-size);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.comic-card__corner--tl {
+  top: 0;
+  left: 0;
+  border-bottom: var(--corner-thickness) solid var(--ink-color);
+  border-right: var(--corner-thickness) solid var(--ink-color);
+}
+
+.comic-card__corner--tr {
+  top: 0;
+  right: 0;
+  border-bottom: var(--corner-thickness) solid var(--ink-color);
+  border-left: var(--corner-thickness) solid var(--ink-color);
+}
+
+.comic-card__corner--bl {
+  bottom: 0;
+  left: 0;
+  border-top: var(--corner-thickness) solid var(--ink-color);
+  border-right: var(--corner-thickness) solid var(--ink-color);
+}
+
+.comic-card__corner--br {
+  bottom: 0;
+  right: 0;
+  border-top: var(--corner-thickness) solid var(--ink-color);
+  border-left: var(--corner-thickness) solid var(--ink-color);
+}
+
+/* Content wrapper - ensures content stays above effects */
+.comic-card__content {
+  position: relative;
+  z-index: 10;
+}
+
+
+/* ============================================================================
+   VARIANT: BURST - Speed lines / burst rays pointing inward
+   ============================================================================ */
+
+.comic-card--burst {
+  --dot-opacity: 0.4;
+  --dot-fade-strength: 85%;
+}
+
+/* Burst rays using conic gradient */
+.comic-card--burst .comic-card__content::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 4deg,
+    rgba(0, 0, 0, var(--ray-opacity)) 4deg,
+    rgba(0, 0, 0, var(--ray-opacity)) 6deg
+  );
+  pointer-events: none;
+  z-index: -1;
+  /* Mask to show only near edges */
+  mask-image: radial-gradient(
+    ellipse at center,
+    transparent var(--ray-safe-center),
+    black 90%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    transparent var(--ray-safe-center),
+    black 90%
+  );
+}
+
+/* ============================================================================
+   VARIANT: QUIET - Halftone only, minimal visual noise
+   ============================================================================ */
+
+.comic-card--quiet {
+  --dot-opacity: 0.3;
+  --dot-fade-strength: 85%;
+}
+
+/* No burst rays for quiet variant */
+.comic-card--quiet .comic-card__content::before {
+  display: none;
+}
+
+/* Quiet variant uses black shadow instead of accent color */
+.comic-card--quiet.comic-card--floating {
+  filter: drop-shadow(5px 5px 0 #000);
+}
+
+/* ============================================================================
+   VARIANT: NOIR - Darker, premium feel with subtle texture
+   ============================================================================ */
+
+.comic-card--noir {
+  --paper-color: #f0f0f0;
+  --dot-opacity: 0.4;
+  --dot-spacing: 5px;
+  --dot-size: 1px;
+  --dot-fade-strength: 90%;
+
+  filter: drop-shadow(4px 4px 0 var(--accent-color));
+}
+
+/* No burst rays for noir */
+.comic-card--noir .comic-card__content::before {
+  display: none;
+}
+
+/* ============================================================================
+   VARIANT: MINIMAL - Clean, barely any effects
+   ============================================================================ */
+
+.comic-card--minimal {
+  --dot-opacity: 0.2;
+  --frame-thickness: 2px;
+}
+
+.comic-card--minimal::before {
+  border: none;
+}
+.comic-card--minimal .comic-card__corner {
+  display: none;
+}
+
+.comic-card--minimal .comic-card__content::before {
+  display: none;
+}
+
+/* ============================================================================
+   ACCENT MODIFIER - Aqua accent highlights
+   ============================================================================ */
+
+.comic-card--accent {
+  filter:
+    drop-shadow(4px 4px 0 var(--accent-color))
+    drop-shadow(2px 2px 0 var(--ink-color));
+}
+
+.comic-card--accent .comic-card__corner {
+  border-color: var(--ink-color);
+}
+
+/* ============================================================================
+   VARIANT: PROSE - Clean article/blog content with edge-only dots
+   ============================================================================ */
+
+.comic-card--prose {
+  --paper-color: #fff;
+  --dot-opacity: 0.25;
+  --dot-spacing: 6px;
+  --dot-fade-strength: 98%;
+}
+
+/* Hide corner brackets for cleaner article look */
+.comic-card--prose .comic-card__corner {
+  display: none;
+}
+
+/* No inner frame line for prose — keep paper bg */
+.comic-card--prose::before {
+  border: none;
+}
+
+/* Dots only at the very outermost edge */
+.comic-card--prose::after {
+  mask-image: linear-gradient(to right, black 0px, black 20px, transparent 60px, transparent calc(100% - 60px), black calc(100% - 20px), black 100%),
+              linear-gradient(to bottom, black 0px, black 20px, transparent 60px, transparent calc(100% - 60px), black calc(100% - 20px), black 100%);
+  -webkit-mask-image: linear-gradient(to right, black 0px, black 20px, transparent 60px, transparent calc(100% - 60px), black calc(100% - 20px), black 100%),
+                      linear-gradient(to bottom, black 0px, black 20px, transparent 60px, transparent calc(100% - 60px), black calc(100% - 20px), black 100%);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+
+/* No burst rays for prose */
+.comic-card--prose .comic-card__content::before {
+  display: none;
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .comic-card {
+    --frame-thickness: 2px;
+    --outline-w: 1px;
+    --corner-size: 8px;
+    --dot-spacing: 8px;
+    --card-bevel: 7px;
+  }
+
+  .comic-card--floating {
+    filter:
+      drop-shadow(3px 3px 0 var(--accent-color))
+      drop-shadow(1px 1px 0 var(--ink-color));
+  }
+
+  .comic-card--quiet.comic-card--floating {
+    filter: drop-shadow(4px 4px 0 #000);
+  }
+
+  .comic-card--accent {
+    filter:
+      drop-shadow(3px 3px 0 var(--accent-color))
+      drop-shadow(2px 2px 0 var(--ink-color));
+  }
+}
+
+/* ============================================================================
+   FALLBACK - Browsers without mask support
+   ============================================================================ */
+
+@supports not (mask-image: radial-gradient(black, white)) {
+  .comic-card::after {
+    opacity: calc(var(--dot-opacity) * 0.5);
+  }
+
+  .comic-card--burst .comic-card__content::before {
+    display: none;
+  }
+}
