@@ -23,7 +23,7 @@ export default function ThankYouPage() {
                 </svg>
               </div>
 
-              <h1 className="font-display text-3xl mb-3 text-black">You&apos;re all set!</h1>
+              <h1 className="font-display text-3xl mb-3" style={{ color: "#000" }}>You&apos;re all set!</h1>
 
               <p className="text-noir-500 mb-2">
                 Thanks for taking the time to fill this out. This gives us everything
