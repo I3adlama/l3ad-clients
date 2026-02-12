@@ -84,14 +84,15 @@ export async function PUT(
   const sql = getDb();
 
   const projects = await sql`
-    SELECT id FROM projects WHERE slug = ${slug}
+    SELECT id, client_name, business_type FROM projects WHERE slug = ${slug}
   `;
 
   if (projects.length === 0) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const projectId = projects[0].id;
+  const project = projects[0];
+  const projectId = project.id;
   const sectionData = JSON.stringify({ [section_key]: data });
 
   if (completed) {
@@ -109,6 +110,27 @@ export async function PUT(
       SET status = 'completed', updated_at = NOW()
       WHERE id = ${projectId}
     `;
+
+    // Notify admin via Web3Forms (fire-and-forget)
+    if (process.env.WEB3FORMS_KEY) {
+      const adminUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://l3ad-clients.vercel.app"}/admin/projects/${projectId}`;
+      fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_key: process.env.WEB3FORMS_KEY,
+          subject: `Intake completed: ${project.client_name}`,
+          from_name: "L3ad Clients",
+          to: "hello@l3adsolutions.com",
+          message: [
+            `${project.client_name} just completed their intake form.`,
+            "",
+            `Business type: ${project.business_type || "N/A"}`,
+            `View responses: ${adminUrl}`,
+          ].join("\n"),
+        }),
+      }).catch(() => {/* silent — don't block the client response */});
+    }
   } else {
     await sql`
       UPDATE intake_responses
