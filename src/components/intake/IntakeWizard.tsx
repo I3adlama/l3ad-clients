@@ -80,6 +80,18 @@ export default function IntakeWizard({
     await saveStep(currentStep, currentStep === totalSteps - 1);
 
     if (currentStep === totalSteps - 1) {
+      // Notify admin via Web3Forms (fire-and-forget from browser)
+      fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_key: "e9fbf786-bbd1-47c8-80b8-1b98a141a58a",
+          subject: `Intake completed: ${clientName}`,
+          from_name: "L3ad Clients",
+          message: `${clientName} just completed their intake form.\n\nView responses: ${window.location.origin}/admin`,
+        }),
+      }).catch(() => {});
+
       window.location.href = `/intake/${slug}/thank-you`;
       return;
     }
