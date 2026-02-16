@@ -35,7 +35,7 @@ export default function RoiSlide({ data }: { data: ProposalData }) {
 
         {/* Menu math */}
         <div className="flex-1">
-          <h2 className="roi-card__title">THE MATH (EZCATER MENU):</h2>
+          <h2 className="roi-card__title">THE MATH (AT ~{data.roi.revenue_per_customer}/ORDER):</h2>
           <div className="space-y-1">
             <div className="roi-cost-item">
               <span className="text-[var(--text-muted)]">Chicken Curry (serves 10)</span>
@@ -50,22 +50,26 @@ export default function RoiSlide({ data }: { data: ProposalData }) {
               <span className="text-[var(--text-muted)]">$210</span>
             </div>
             <div className="roi-cost-item">
-              <span className="text-[var(--accent)] font-bold">Avg order value: ~$200+</span>
+              <span className="text-[var(--accent)] font-bold">Avg order value: ~{data.roi.revenue_per_customer}+</span>
               <span />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Projected growth — card format matching the above */}
+      {/* Projected growth — card format */}
       {data.roi.projections && (
         <div className="scroll-fade-up delay-2">
-          <h2 className="roi-card__title">PROJECTED GROWTH:</h2>
+          <h2 className="roi-card__title">CONSERVATIVE GROWTH PROJECTIONS:</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
             {data.roi.projections.map((p, i) => (
               <div key={i} className="roi-projection-card">
                 <div className="roi-projection-card__month">{p.month}</div>
                 <div className="space-y-1">
+                  <div className="roi-cost-item">
+                    <span className="text-[var(--text-muted)]">New Orders</span>
+                    <span className="text-white font-bold">{p.orders}</span>
+                  </div>
                   <div className="roi-cost-item">
                     <span className="text-[var(--text-muted)]">Revenue</span>
                     <span className={i > 0 ? "text-[var(--accent)] font-bold" : "text-white font-bold"}>
@@ -74,7 +78,7 @@ export default function RoiSlide({ data }: { data: ProposalData }) {
                   </div>
                   <div className="roi-cost-item">
                     <span className="text-[var(--text-muted)]">Cumulative</span>
-                    <span className={i === 0 ? "text-[#f59e0b] font-bold" : "text-[var(--accent)] font-bold"}>
+                    <span className={i <= 1 ? "text-[#f59e0b] font-bold" : "text-[var(--accent)] font-bold"}>
                       {p.cumulative}
                     </span>
                   </div>
@@ -99,7 +103,7 @@ export default function RoiSlide({ data }: { data: ProposalData }) {
         <div className="roi-callout__text">
           <p>Just 2 extra catering orders per month covers your entire monthly investment of {data.roi.monthly_cost}.</p>
           <p>By Month 6, SEO begins to compound — driving free organic traffic and inbound leads around the clock.</p>
-          <p>By Month 12, your projected cumulative profit reaches {data.roi.projections?.[data.roi.projections.length - 1]?.cumulative}.</p>
+          <p>By Month 12, you&apos;re projected at 8-10 new orders/mo — {data.roi.annual_revenue} in annual revenue.</p>
         </div>
       </div>
     </section>

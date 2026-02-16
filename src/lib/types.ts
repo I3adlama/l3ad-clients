@@ -210,6 +210,7 @@ export interface ProposalData {
     roi_percentage: string;
     projections?: {
       month: string;
+      orders: string;
       revenue: string;
       cumulative: string;
     }[];

@@ -53,9 +53,11 @@ export default function PricingSummarySlide({ data }: { data: ProposalData }) {
       {/* Personal note */}
       {data.pricing_summary.personal_note && (
         <div className="scroll-fade-up delay-4 personal-note">
-          <p className="personal-note__text">
-            {data.pricing_summary.personal_note}
-          </p>
+          {data.pricing_summary.personal_note.split("\n\n").map((paragraph, i) => (
+            <p key={i} className="personal-note__text">
+              {paragraph}
+            </p>
+          ))}
           <p className="personal-note__author">— Nathaniel, L3ad Solutions LLC</p>
         </div>
       )}

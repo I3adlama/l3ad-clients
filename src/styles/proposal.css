@@ -347,6 +347,53 @@
   border-right: 2px solid #ef4444;
 }
 
+/* Competitor cards — mobile-friendly alternative to table */
+.comp-card {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.25rem 1.5rem;
+}
+
+.comp-card--client {
+  border: 2px solid #ef4444;
+}
+
+.comp-card__name {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.comp-card--client .comp-card__name {
+  color: #ef4444;
+  border-bottom-color: rgba(239, 68, 68, 0.2);
+}
+
+.comp-card__metric {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.comp-card__metric-label {
+  color: var(--text-muted);
+}
+
+.comp-card__metric-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.comp-card--client .comp-card__metric-value {
+  color: #ef4444;
+}
+
 /* Unfair advantage callout */
 .advantage-callout {
   background: var(--bg-elevated);

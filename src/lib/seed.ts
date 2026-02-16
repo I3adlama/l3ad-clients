@@ -168,15 +168,15 @@ const pearlProposal: ProposalData = {
   roi: {
     monthly_cost: "$350",
     revenue_per_customer: "$200",
-    new_customers_per_month: "2",
-    monthly_revenue: "$400+",
-    annual_revenue: "$19,200-$31,680",
-    roi_percentage: "300-560%",
+    new_customers_per_month: "3-4",
+    monthly_revenue: "$600-$800",
+    annual_revenue: "$12,000-$18,000",
+    roi_percentage: "200-300%",
     projections: [
-      { month: "Month 1", revenue: "$200-$440", cumulative: "Break-even" },
-      { month: "Month 3", revenue: "$600-$1,100/mo", cumulative: "+$150-$1,650" },
-      { month: "Month 6", revenue: "$1,000-$1,760/mo", cumulative: "+$3,300-$7,860" },
-      { month: "Month 12", revenue: "$1,600-$2,640/mo", cumulative: "+$14,000-$26,880" },
+      { month: "Month 1", orders: "1-2 orders", revenue: "$200-$400", cumulative: "Ramping up" },
+      { month: "Month 3", orders: "3-4/mo", revenue: "$600-$800/mo", cumulative: "Near break-even" },
+      { month: "Month 6", orders: "5-7/mo", revenue: "$1,000-$1,400/mo", cumulative: "+$1,500-$3,500" },
+      { month: "Month 12", orders: "8-10/mo", revenue: "$1,600-$2,000/mo", cumulative: "+$7,000-$13,000" },
     ],
   },
   timeline: {
@@ -189,7 +189,7 @@ const pearlProposal: ProposalData = {
       },
       {
         phase_number: 2,
-        title: "Growth Engine",
+        title: "Growth",
         duration: "Month 1-2",
         tasks: ["Blog content targeting local keywords", "On-page SEO for every page", "Backlink outreach to directories", "Live Google Reviews pulling social proof"],
       },
@@ -201,7 +201,7 @@ const pearlProposal: ProposalData = {
       },
       {
         phase_number: 4,
-        title: "Compounding Returns",
+        title: "Compound",
         duration: "Month 6-12",
         tasks: ["Top 3 rankings for niche keywords", "Steady inbound leads", "AI search visibility grows", "Free traffic replacing paid ads"],
       },
@@ -214,7 +214,7 @@ const pearlProposal: ProposalData = {
       { label: "SEO", original_price: "$497/mo", price: "$250", frequency: "/mo", savings: "SAVE $247/mo", highlighted: true },
       { label: "GBP PRO", original_price: "$197/mo", price: "$100", frequency: "/mo", savings: "SAVE $97/mo", highlighted: true },
     ],
-    personal_note: "\"Kal, I'm not here to sell you something you don't need. Lacey was my boss at Intel — this is personal. I've seen what you and Lacey have built with A Taste of Pearl, and the food speaks for itself. The problem isn't your product — it's that people can't find you. Two extra catering orders per month pays for everything I'm proposing. Let me handle the digital side so you can focus on what you do best.\"",
+    personal_note: "\"Kal, I'm not here to sell you something you don't need.\n\nLacey was my boss at Intel — this is personal. I've seen what you and Lacey have built with A Taste of Pearl, and the food speaks for itself.\n\nThe problem isn't your product — it's that people can't find you.\n\nTwo extra catering orders per month pays for everything I'm proposing. Let me handle the digital side so you can focus on what you do best.\"",
   },
   next_steps: {
     steps: [
@@ -230,10 +230,13 @@ const pearlProposal: ProposalData = {
 export async function seedProposals() {
   const sql = getDb();
 
-  // Check if already seeded
+  const data = JSON.stringify(pearlProposal);
+
+  // Upsert — update if exists, insert if not
   const existing = await sql`SELECT id FROM proposals WHERE slug = 'a-taste-of-pearl'`;
   if (existing.length > 0) {
-    return { success: true, message: "Proposal already exists" };
+    await sql`UPDATE proposals SET proposal_data = ${data}, updated_at = NOW() WHERE slug = 'a-taste-of-pearl'`;
+    return { success: true, message: "A Taste of Pearl proposal updated" };
   }
 
   await sql`
@@ -243,7 +246,7 @@ export async function seedProposals() {
       'A Taste of Pearl',
       'Kal',
       'Sri Lankan catering',
-      ${JSON.stringify(pearlProposal)},
+      ${data},
       'published'
     )
   `;
