@@ -21,6 +21,19 @@ export default function Dashboard() {
 
   return (
     <div>
+      {/* Proposals quick-link */}
+      <div className="noir-panel noir-panel--accent p-4 mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-lg text-white">Proposals</h2>
+          <p className="text-[var(--text-soft)] text-sm">
+            Client presentation decks — view, publish, and share.
+          </p>
+        </div>
+        <BevelButton href="/admin/proposals" size="sm" variant="secondary">
+          View Proposals
+        </BevelButton>
+      </div>
+
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-display">Projects</h1>
         <BevelButton href="/admin/projects/new" size="sm">

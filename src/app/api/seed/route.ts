@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runMigrations } from "@/lib/seed";
+import { runMigrations, seedProposals } from "@/lib/seed";
 import { verifySession } from "@/lib/auth";
 
 export async function POST() {
@@ -9,8 +9,12 @@ export async function POST() {
   }
 
   try {
-    const result = await runMigrations();
-    return NextResponse.json(result);
+    const migrations = await runMigrations();
+    const proposals = await seedProposals();
+    return NextResponse.json({
+      success: true,
+      message: `${migrations.message}. ${proposals.message}`,
+    });
   } catch {
     return NextResponse.json(
       { error: "Migration failed" },

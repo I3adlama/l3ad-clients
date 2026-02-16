@@ -128,3 +128,137 @@ export const STEP_LABELS = [
   "Website Features",
   "Goals",
 ];
+
+// ============================================================================
+// Proposal types — 10-slide presentation viewer
+// ============================================================================
+
+export interface Proposal {
+  id: string;
+  slug: string;
+  project_id: string | null;
+  client_name: string;
+  contact_name: string | null;
+  industry: string | null;
+  proposal_data: ProposalData;
+  status: "draft" | "published" | "archived";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProposalData {
+  /** Slide 1: Title */
+  title: {
+    client_name: string;
+    date: string;
+    subtitle?: string;
+  };
+
+  /** Slide 2: Pain Points */
+  pain_points: {
+    icon: string;
+    title: string;
+    description: string;
+  }[];
+
+  /** Slide 3: Why New Website */
+  why_new_website: {
+    before: { label: string; description: string }[];
+    after: { label: string; description: string }[];
+  };
+
+  /** Slide 4: AIDA Strategy */
+  aida_strategy: {
+    attention: { title: string; items: string[] };
+    interest: { title: string; items: string[] };
+    desire: { title: string; items: string[] };
+    action: { title: string; items: string[] };
+  };
+
+  /** Slide 5: Itemized Pricing */
+  itemized_pricing: {
+    sections: {
+      category: string;
+      items: {
+        name: string;
+        description?: string;
+        price: string;
+      }[];
+      subtotal?: string;
+    }[];
+  };
+
+  /** Slide 6: Competitors */
+  competitors: {
+    entries: {
+      name: string;
+      website_score?: string;
+      seo_score?: string;
+      reviews?: string;
+      notes?: string;
+    }[];
+    unfair_advantage: string;
+  };
+
+  /** Slide 7: ROI */
+  roi: {
+    monthly_cost: string;
+    revenue_per_customer: string;
+    new_customers_per_month: string;
+    monthly_revenue: string;
+    annual_revenue: string;
+    roi_percentage: string;
+    projections?: {
+      month: string;
+      revenue: string;
+      cumulative: string;
+    }[];
+  };
+
+  /** Slide 8: Timeline */
+  timeline: {
+    phases: {
+      phase_number: number;
+      title: string;
+      duration: string;
+      tasks: string[];
+    }[];
+  };
+
+  /** Slide 9: Pricing Summary */
+  pricing_summary: {
+    packages: {
+      label: string;
+      original_price?: string;
+      price: string;
+      frequency?: string;
+      savings?: string;
+      highlighted?: boolean;
+    }[];
+    personal_note?: string;
+  };
+
+  /** Slide 10: Next Steps */
+  next_steps: {
+    steps: {
+      number: number;
+      title: string;
+      description: string;
+    }[];
+    cta_text?: string;
+    cta_url?: string;
+  };
+}
+
+export const SLIDE_LABELS = [
+  "Title",
+  "Pain Points",
+  "Why New Website",
+  "AIDA Strategy",
+  "Itemized Pricing",
+  "Competitors",
+  "ROI",
+  "Timeline",
+  "Pricing Summary",
+  "Next Steps",
+];
