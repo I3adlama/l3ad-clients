@@ -61,7 +61,7 @@ export default function RoiSlide({ data }: { data: ProposalData }) {
       {data.roi.projections && (
         <div className="scroll-fade-up delay-2">
           <h2 className="roi-card__title">CONSERVATIVE GROWTH PROJECTIONS:</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             {data.roi.projections.map((p, i) => (
               <div key={i} className="roi-projection-card">
                 <div className="roi-projection-card__month">{p.month}</div>

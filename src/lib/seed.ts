@@ -107,7 +107,7 @@ const pearlProposal: ProposalData = {
     },
     desire: {
       title: "Make them want YOUR food.",
-      items: ["Menu pages", "Sri Lankan cuisine education", "Testimonials", "\"Only Sri Lankan caterer in Portland\" positioning"],
+      items: ["Menu pages", "Sri Lankan cuisine education", "Testimonials", "\"Only Sri Lankan caterer\" positioning"],
     },
     action: {
       title: "Make it effortless to order.",
