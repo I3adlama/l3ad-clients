@@ -19,9 +19,16 @@ export async function generateMetadata({
     return { title: "Proposal Not Found" };
   }
 
+  const clientName = rows[0].client_name;
+
   return {
-    title: `${rows[0].client_name} — Digital Growth Proposal | L3ad Solutions`,
-    description: `Custom digital growth proposal for ${rows[0].client_name} by L3ad Solutions.`,
+    title: `${clientName} — Digital Growth Proposal`,
+    description: `Custom digital growth proposal for ${clientName} by L3ad Solutions.`,
+    openGraph: {
+      title: `${clientName} — Digital Growth Proposal | L3ad Solutions`,
+      description: `Custom digital growth proposal for ${clientName} by L3ad Solutions.`,
+      images: ["/op-image.png"],
+    },
   };
 }
 
