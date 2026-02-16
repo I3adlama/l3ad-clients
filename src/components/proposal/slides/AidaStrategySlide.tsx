@@ -41,15 +41,17 @@ export default function AidaStrategySlide({ data }: { data: ProposalData }) {
                 {cfg.label}
               </div>
               <div className="aida-card__title">{section.title}</div>
-              {section.items.map((item, j) => (
-                <div key={j} className="aida-card__item">
-                  <i
-                    className="bi-check-square-fill flex-shrink-0 mt-0.5"
-                    style={{ color: cfg.color }}
-                  />
-                  <span>{item}</span>
-                </div>
-              ))}
+              <div className="aida-card__items">
+                {section.items.map((item, j) => (
+                  <div key={j} className="aida-card__item">
+                    <i
+                      className="bi-check-square-fill flex-shrink-0 mt-0.5"
+                      style={{ color: cfg.color }}
+                    />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}

@@ -43,9 +43,6 @@ export default function ProposalViewer({ data }: ProposalViewerProps) {
 
   return (
     <div ref={containerRef}>
-      {/* Top teal accent line */}
-      <div className="fixed top-0 left-0 right-0 h-1 bg-[var(--accent)] z-40" />
-
       <TitleSlide data={data} />
       <PainPointsSlide data={data} />
       <WhyNewWebsiteSlide data={data} />
