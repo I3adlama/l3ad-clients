@@ -10,7 +10,12 @@ const AIDA_CONFIG = [
 export default function AidaStrategySlide({ data }: { data: ProposalData }) {
   return (
     <section className="proposal-section">
-      <h1 className="scroll-fade-up section-heading">OUR STRATEGY: THE AIDA FRAMEWORK</h1>
+      <div className="scroll-fade-up">
+        <p className="font-body text-sm tracking-widest text-[var(--text-soft)] font-bold uppercase mb-1">
+          Our Strategy:
+        </p>
+        <h1 className="section-heading">THE AIDA FRAMEWORK</h1>
+      </div>
       <p className="scroll-fade-up delay-1 section-subheading">
         Every piece of your digital presence follows one proven marketing framework:
       </p>

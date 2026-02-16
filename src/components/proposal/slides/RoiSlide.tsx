@@ -104,6 +104,13 @@ export default function RoiSlide({ data }: { data: ProposalData }) {
                   </td>
                 ))}
               </tr>
+              {/* Summary row */}
+              <tr className="roi-table__summary">
+                <td>12-Month ROI</td>
+                <td colSpan={data.roi.projections.length} className="text-center">
+                  {data.roi.annual_revenue} projected revenue &middot; {data.roi.roi_percentage} return
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -111,8 +118,11 @@ export default function RoiSlide({ data }: { data: ProposalData }) {
 
       {/* Orange payoff callout */}
       <div className="scroll-fade-up delay-3 roi-callout">
-        2 extra catering orders covers your entire monthly investment ($350/mo).
-        By Month 6, SEO compounds — organic traffic you don&apos;t pay for, bringing leads 24/7.
+        <i className="bi-lightning-charge-fill roi-callout__icon" />
+        <div className="roi-callout__text">
+          2 extra catering orders covers your entire monthly investment ($350/mo).
+          By Month 6, SEO compounds — organic traffic you don&apos;t pay for, bringing leads 24/7.
+        </div>
       </div>
     </section>
   );

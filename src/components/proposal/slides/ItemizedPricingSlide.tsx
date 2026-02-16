@@ -23,7 +23,7 @@ export default function ItemizedPricingSlide({ data }: { data: ProposalData }) {
                 {section.subtotal && <span className="text-lg font-display">{section.subtotal}</span>}
               </div>
 
-              {!isOptional && section.items.map((item, j) => (
+              {section.items.map((item, j) => (
                 <div
                   key={j}
                   className={`pricing-item ${item.price ? "pricing-item--main" : "pricing-item--sub"}`}

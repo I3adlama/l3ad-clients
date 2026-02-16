@@ -22,13 +22,15 @@ export default function TimelineSlide({ data }: { data: ProposalData }) {
 
             {/* Content */}
             <div className="flex-1 pb-2">
-              <div className="flex items-baseline gap-3 mb-1">
-                <span className="timeline-phase__duration">{phase.duration}</span>
-                <span className="timeline-phase__title">{phase.title}</span>
+              <div className="timeline-phase__header">
+                <span className="timeline-phase__header-title">{phase.title}</span>
+                <span className="timeline-phase__header-sep">—</span>
+                <span className="timeline-phase__header-duration">{phase.duration}</span>
               </div>
               {phase.tasks.map((task, j) => (
                 <div key={j} className="timeline-phase__task">
-                  {task}
+                  <i className="bi-check-square-fill flex-shrink-0 text-[#ec4899]" />
+                  <span>{task}</span>
                 </div>
               ))}
             </div>

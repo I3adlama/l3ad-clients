@@ -5,9 +5,6 @@ export default function PricingSummarySlide({ data }: { data: ProposalData }) {
     <section className="proposal-section">
       <div className="scroll-fade-up">
         <h1 className="section-heading">SIMPLE PRICING, NO SURPRISES</h1>
-        <span className="founders-badge mt-2 inline-block">
-          FOUNDER&apos;S RATE — SAVE $840+/MO VS. STANDARD PRICING
-        </span>
       </div>
 
       {/* Price boxes */}
@@ -31,14 +28,31 @@ export default function PricingSummarySlide({ data }: { data: ProposalData }) {
         ))}
       </div>
 
+      {/* Founder's Rate badge */}
+      <div className="scroll-fade-up delay-2 mt-5 text-center">
+        <span className="founders-badge">
+          FOUNDER&apos;S RATE — SAVE $840+/MO VS. STANDARD PRICING
+        </span>
+      </div>
+
       {/* Optional add-on */}
-      <div className="scroll-fade-up delay-2 pricing-bar pricing-bar--orange mt-5 text-sm">
-        OPTIONAL: Social Media Management $397/mo → $150/mo (save $247/mo)
+      <div className="scroll-fade-up delay-3 optional-addon">
+        <div>
+          <div className="optional-addon__label">OPTIONAL ADD-ON</div>
+          <p className="font-body text-sm text-[var(--text-muted)] mt-1">
+            Social Media Management — scheduled posting, content calendar, cross-platform strategy
+          </p>
+        </div>
+        <div className="optional-addon__pricing">
+          <span className="optional-addon__original">$397/mo</span>
+          <span className="optional-addon__price">$150/mo</span>
+          <span className="optional-addon__savings">SAVE $247/mo</span>
+        </div>
       </div>
 
       {/* Personal note */}
       {data.pricing_summary.personal_note && (
-        <div className="scroll-fade-up delay-3 personal-note">
+        <div className="scroll-fade-up delay-4 personal-note">
           <p className="personal-note__text">
             {data.pricing_summary.personal_note}
           </p>

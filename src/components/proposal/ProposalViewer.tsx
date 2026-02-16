@@ -59,12 +59,33 @@ export default function ProposalViewer({ data }: ProposalViewerProps) {
 
       {/* Footer */}
       <footer className="proposal-footer">
-        <p className="proposal-footer__text">
-          L3AD SOLUTIONS
-        </p>
-        <p className="proposal-footer__text">
-          hello@l3adsolutions.com &middot; (321) 291-3409 &middot; l3adsolutions.com
-        </p>
+        <div className="proposal-footer__inner">
+          <p className="proposal-footer__brand">
+            <span className="text-white">L3AD</span>{" "}
+            <span className="text-[var(--accent)]">SOLUTIONS</span>
+          </p>
+
+          <a href="mailto:hello@l3adsolutions.com" className="proposal-footer__link">
+            <span className="proposal-footer__icon">
+              <i className="bi-envelope-fill" />
+            </span>
+            hello@l3adsolutions.com
+          </a>
+
+          <a href="tel:+13212913409" className="proposal-footer__link">
+            <span className="proposal-footer__icon">
+              <i className="bi-telephone-fill" />
+            </span>
+            (321) 291-3409
+          </a>
+
+          <a href="https://l3adsolutions.com" target="_blank" rel="noopener noreferrer" className="proposal-footer__link">
+            <span className="proposal-footer__icon">
+              <i className="bi-globe2" />
+            </span>
+            l3adsolutions.com
+          </a>
+        </div>
       </footer>
     </div>
   );
