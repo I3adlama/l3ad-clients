@@ -3,38 +3,39 @@ import Image from "next/image";
 
 export default function TitleSlide({ data }: { data: ProposalData }) {
   return (
-    <div className="proposal-slide flex flex-col items-start justify-center">
+    <section className="min-h-screen flex flex-col items-start justify-center px-6 sm:px-10 lg:px-16 relative">
       {/* Top teal accent bar */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-[var(--accent)]" />
 
-      <Image
-        src="/logo-header.png"
-        alt="L3ad Solutions"
-        width={220}
-        height={50}
-        className="mb-8"
-        priority
-      />
+      <div className="scroll-fade-up">
+        <Image
+          src="/logo-header.png"
+          alt="L3ad Solutions"
+          width={240}
+          height={55}
+          className="mb-10"
+          priority
+        />
+      </div>
 
-      <h1 className="font-display text-4xl sm:text-5xl md:text-6xl text-white mb-2 leading-tight">
+      <h1 className="scroll-fade-up delay-1 font-display text-5xl sm:text-6xl md:text-7xl text-white mb-3 leading-tight">
         DIGITAL GROWTH
         <br />
         PROPOSAL
       </h1>
 
-      {/* Teal divider */}
-      <div className="w-32 h-1 bg-[var(--accent)] my-4" />
+      <div className="scroll-fade-up delay-2 w-36 h-1 bg-[var(--accent)] my-5" />
 
-      <p className="font-display text-xl sm:text-2xl text-[var(--accent)] italic">
+      <p className="scroll-fade-up delay-3 font-display text-2xl sm:text-3xl text-[var(--accent)] italic">
         {data.title.client_name}
       </p>
 
-      <p className="text-[var(--text-soft)] text-sm mt-6 tracking-wider">
+      <p className="scroll-fade-up delay-4 font-body text-base text-[var(--text-soft)] mt-8 tracking-wider">
         Prepared by L3ad Solutions LLC &middot; {data.title.date}
       </p>
 
       {/* Bottom teal accent bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-[var(--accent)]" />
-    </div>
+    </section>
   );
 }

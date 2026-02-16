@@ -9,24 +9,24 @@ const AIDA_CONFIG = [
 
 export default function AidaStrategySlide({ data }: { data: ProposalData }) {
   return (
-    <div className="proposal-slide">
-      <h2 className="slide-heading">OUR STRATEGY: THE AIDA FRAMEWORK</h2>
-      <p className="slide-subheading">
+    <section className="proposal-section">
+      <h1 className="scroll-fade-up section-heading">OUR STRATEGY: THE AIDA FRAMEWORK</h1>
+      <p className="scroll-fade-up delay-1 section-subheading">
         Every piece of your digital presence follows one proven marketing framework:
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl">
-        {AIDA_CONFIG.map((cfg) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {AIDA_CONFIG.map((cfg, idx) => {
           const section = data.aida_strategy[cfg.key];
           return (
             <div
               key={cfg.key}
-              className="aida-card"
+              className={`scroll-fade-up delay-${idx + 1} aida-card`}
               style={{ borderColor: cfg.color }}
             >
               {/* Top color bar */}
               <div
-                className="h-1 -mx-[1.25rem] -mt-[1.25rem] mb-4"
+                className="h-1 -mx-[1.5rem] -mt-[1.5rem] mb-5"
                 style={{ background: cfg.color }}
               />
               <div className="aida-card__letter" style={{ color: cfg.color }}>
@@ -37,16 +37,22 @@ export default function AidaStrategySlide({ data }: { data: ProposalData }) {
               </div>
               <div className="aida-card__title">{section.title}</div>
               {section.items.map((item, j) => (
-                <div key={j} className="aida-card__item">{item}</div>
+                <div key={j} className="aida-card__item">
+                  <i
+                    className="bi-check-square-fill flex-shrink-0 mt-0.5"
+                    style={{ color: cfg.color }}
+                  />
+                  <span>{item}</span>
+                </div>
               ))}
             </div>
           );
         })}
       </div>
 
-      <p className="text-[var(--accent)] italic text-center text-sm mt-6 max-w-3xl mx-auto">
+      <p className="scroll-fade-up delay-5 text-[var(--accent)] italic text-center font-body text-base mt-8 max-w-3xl mx-auto">
         Every blog post, page, and social post follows this framework — turning strangers into customers.
       </p>
-    </div>
+    </section>
   );
 }

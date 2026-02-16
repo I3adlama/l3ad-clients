@@ -1,73 +1,83 @@
 /* ============================================================================
-   PROPOSAL VIEWER — Slide-based presentation styles
+   PROPOSAL VIEWER — Single-page scrolling presentation
    ============================================================================ */
 
-/* Slide transitions — matches IntakeWizard pattern */
-.slide-enter {
-  opacity: 0;
-  transform: translateX(60px);
+/* ============================================================================
+   SECTION LAYOUT
+   ============================================================================ */
+
+.proposal-section {
+  padding: 5rem 1.5rem;
+  max-width: 960px;
+  margin: 0 auto;
 }
 
-.slide-active {
+@media (min-width: 640px) {
+  .proposal-section {
+    padding: 6rem 2.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .proposal-section {
+    padding: 7rem 2.5rem;
+  }
+}
+
+.proposal-section + .proposal-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================================
+   SCROLL ANIMATIONS
+   ============================================================================ */
+
+.scroll-fade-up {
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-fade-up.is-visible {
   opacity: 1;
-  transform: translateX(0);
-  transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(0);
 }
 
-.slide-exit {
-  opacity: 0;
-  transform: translateX(-60px);
-  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-}
-
-.slide-enter-back {
-  opacity: 0;
-  transform: translateX(-60px);
-}
+.scroll-fade-up.delay-1 { transition-delay: 0.1s; }
+.scroll-fade-up.delay-2 { transition-delay: 0.2s; }
+.scroll-fade-up.delay-3 { transition-delay: 0.3s; }
+.scroll-fade-up.delay-4 { transition-delay: 0.4s; }
+.scroll-fade-up.delay-5 { transition-delay: 0.5s; }
 
 /* ============================================================================
-   SLIDE CONTAINER
+   SECTION HEADING — LUXOR font (H1-level)
    ============================================================================ */
 
-.proposal-slide {
-  min-height: calc(100vh - 64px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 2rem 1.5rem;
-}
-
-@media (min-width: 640px) {
-  .proposal-slide {
-    padding: 3rem 2rem;
-  }
-}
-
-/* ============================================================================
-   SLIDE HEADING
-   ============================================================================ */
-
-.slide-heading {
+.section-heading {
   font-family: var(--font-ui);
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   color: var(--accent);
-  letter-spacing: 0.15em;
+  letter-spacing: 0.1em;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   text-transform: uppercase;
+  line-height: 1.3;
 }
 
 @media (min-width: 640px) {
-  .slide-heading {
-    font-size: 1.5rem;
+  .section-heading {
+    font-size: 2.25rem;
   }
 }
 
-.slide-subheading {
+.section-subheading {
+  font-family: var(--font-body);
   color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
 }
 
 /* ============================================================================
@@ -78,7 +88,7 @@
   background: var(--bg-elevated);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-left: 4px solid #ef4444;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
   transition: border-color 0.3s var(--ease-premium),
               transform 0.3s var(--ease-premium);
 }
@@ -89,18 +99,19 @@
 }
 
 .pain-card__title {
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   color: var(--text);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   margin-bottom: 0.375rem;
 }
 
 .pain-card__desc {
-  font-size: 0.85rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* ============================================================================
@@ -109,7 +120,7 @@
 
 .comparison-col {
   border: 1.5px solid;
-  padding: 1.5rem;
+  padding: 1.75rem;
   flex: 1;
 }
 
@@ -122,20 +133,22 @@
 }
 
 .comparison-col__header {
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
   letter-spacing: 0.2em;
   font-weight: 700;
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .comparison-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.35rem 0;
-  font-size: 0.85rem;
+  gap: 0.625rem;
+  padding: 0.4rem 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 /* ============================================================================
@@ -145,39 +158,46 @@
 .aida-card {
   background: var(--bg-elevated);
   border: 1.5px solid;
-  padding: 1.25rem;
-  text-align: center;
+  padding: 1.5rem;
   flex: 1;
 }
 
 .aida-card__letter {
   font-family: var(--font-display);
-  font-size: 2.5rem;
+  font-size: 3rem;
   font-weight: 700;
   line-height: 1;
   margin-bottom: 0.25rem;
+  text-align: center;
 }
 
 .aida-card__label {
-  font-family: var(--font-ui);
-  font-size: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
   letter-spacing: 0.2em;
   font-weight: 700;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 
 .aida-card__title {
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   color: var(--text);
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
   font-style: italic;
+  text-align: center;
 }
 
 .aida-card__item {
-  font-size: 0.8rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
   color: var(--text-muted);
-  padding: 0.15rem 0;
+  padding: 0.25rem 0;
+  text-align: left;
 }
 
 /* ============================================================================
@@ -185,11 +205,11 @@
    ============================================================================ */
 
 .pricing-bar {
-  padding: 0.5rem 1rem;
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
+  padding: 0.75rem 1.25rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -221,8 +241,9 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  padding: 0.4rem 1rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 1.25rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
 }
 
 .pricing-item--main {
@@ -232,8 +253,8 @@
 
 .pricing-item--sub {
   color: var(--text-soft);
-  padding-left: 2rem;
-  font-size: 0.8rem;
+  padding-left: 2.25rem;
+  font-size: 0.95rem;
 }
 
 /* ============================================================================
@@ -243,17 +264,18 @@
 .comp-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
 }
 
 .comp-table th {
   background: var(--accent);
   color: #0a0a0a;
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  padding: 0.6rem 0.75rem;
+  padding: 0.75rem 1rem;
   text-align: center;
   text-transform: uppercase;
 }
@@ -265,7 +287,7 @@
 .comp-table td {
   background: var(--bg-elevated);
   color: var(--text);
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -285,17 +307,16 @@
   background: var(--bg-elevated);
   border: 1.5px solid var(--accent);
   border-left: 4px solid var(--accent);
-  padding: 1.25rem 1.5rem;
-  margin-top: 1.5rem;
+  padding: 1.5rem 2rem;
 }
 
 .advantage-callout__title {
-  font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   color: var(--accent);
   font-weight: 700;
   letter-spacing: 0.15em;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 /* ============================================================================
@@ -305,35 +326,38 @@
 .roi-cost-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.3rem 0;
-  font-size: 0.9rem;
+  padding: 0.4rem 0;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
 }
 
 .roi-total {
   display: flex;
   justify-content: space-between;
-  padding-top: 0.5rem;
-  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
   border-top: 2px solid var(--accent);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.15rem;
+  font-family: var(--font-body);
 }
 
 .roi-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
-  margin-top: 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  margin-top: 2rem;
 }
 
 .roi-table th {
   background: var(--accent);
   color: #0a0a0a;
-  font-family: var(--font-ui);
-  font-size: 0.65rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  padding: 0.5rem;
+  padding: 0.65rem 0.75rem;
   text-align: center;
 }
 
@@ -343,7 +367,7 @@
 
 .roi-table td {
   background: var(--bg-elevated);
-  padding: 0.5rem;
+  padding: 0.65rem 0.75rem;
   text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -366,12 +390,13 @@
 .roi-callout {
   background: var(--bg-elevated);
   border: 1px solid #f59e0b;
-  padding: 1rem 1.25rem;
-  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-top: 2rem;
   color: #f59e0b;
   font-weight: 700;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.6;
 }
 
 /* ============================================================================
@@ -380,9 +405,9 @@
 
 .timeline-phase {
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   position: relative;
-  padding-bottom: 1.5rem;
+  padding-bottom: 2rem;
 }
 
 .timeline-phase:last-child {
@@ -397,8 +422,8 @@
 }
 
 .timeline-phase__circle {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 2px solid var(--accent);
   background: var(--bg);
@@ -406,6 +431,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 1.25rem;
 }
 
 .timeline-phase__line {
@@ -416,64 +442,69 @@
 }
 
 .timeline-phase__duration {
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
   color: var(--accent);
   font-weight: 700;
   letter-spacing: 0.1em;
 }
 
 .timeline-phase__title {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 1.25rem;
   color: var(--text);
+  font-weight: 700;
   margin-bottom: 0.375rem;
 }
 
 .timeline-phase__task {
-  font-size: 0.85rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
   color: var(--text-muted);
-  padding: 0.1rem 0;
+  padding: 0.15rem 0;
+  line-height: 1.5;
 }
 
 /* ============================================================================
-   PRICE BOXES (Slide 9)
+   PRICE BOXES
    ============================================================================ */
 
 .price-box {
   background: var(--bg-elevated);
   border: 1.5px solid var(--accent);
-  padding: 1.25rem;
+  padding: 1.5rem;
   text-align: center;
   flex: 1;
   min-width: 0;
 }
 
 .price-box__label {
-  font-family: var(--font-ui);
-  font-size: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
   color: var(--accent);
   font-weight: 700;
   letter-spacing: 0.15em;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .price-box__original {
-  font-size: 0.9rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
   color: var(--text-soft);
   text-decoration: line-through;
 }
 
 .price-box__price {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: 2.25rem;
   color: var(--text);
   font-weight: 700;
   line-height: 1.2;
 }
 
 .price-box__freq {
-  font-size: 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   color: var(--text-soft);
   letter-spacing: 0.15em;
   margin-bottom: 0.5rem;
@@ -483,9 +514,10 @@
   display: inline-block;
   background: #10b981;
   color: #0a0a0a;
-  font-size: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.75rem;
   letter-spacing: 0.05em;
 }
 
@@ -495,13 +527,13 @@
 
 .next-step {
   display: flex;
-  gap: 1rem;
-  padding: 0.75rem 0;
+  gap: 1.25rem;
+  padding: 1rem 0;
 }
 
 .next-step__circle {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: 2px solid var(--accent);
   background: var(--bg);
@@ -510,97 +542,24 @@
   justify-content: center;
   flex-shrink: 0;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   color: var(--accent);
   font-weight: 700;
 }
 
 .next-step__title {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 1.25rem;
   color: var(--text);
-  margin-bottom: 0.2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
 }
 
 .next-step__desc {
-  font-size: 0.9rem;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
   color: var(--text-muted);
-}
-
-/* ============================================================================
-   SLIDE NAV BAR
-   ============================================================================ */
-
-.slide-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(10, 10, 10, 0.95);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  z-index: 50;
-}
-
-.slide-nav__btn {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.375rem;
-  display: flex;
-  align-items: center;
-  font-size: 1.25rem;
-}
-
-.slide-nav__btn:hover {
-  color: var(--accent);
-}
-
-.slide-nav__btn:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-
-.slide-nav__dots {
-  display: flex;
-  gap: 0.375rem;
-  align-items: center;
-}
-
-.slide-nav__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.2);
-  cursor: pointer;
-  padding: 0;
-  transition: background 0.2s, transform 0.2s;
-}
-
-.slide-nav__dot--active {
-  background: var(--accent);
-  transform: scale(1.3);
-}
-
-.slide-nav__dot:hover {
-  background: rgba(0, 240, 208, 0.5);
-}
-
-.slide-nav__label {
-  font-family: var(--font-ui);
-  font-size: 0.6rem;
-  color: var(--text-soft);
-  letter-spacing: 0.1em;
-  min-width: 100px;
-  text-align: center;
-  text-transform: uppercase;
+  line-height: 1.6;
 }
 
 /* ============================================================================
@@ -611,10 +570,10 @@
   display: inline-block;
   background: #10b981;
   color: #0a0a0a;
-  font-family: var(--font-ui);
-  font-size: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 0.3rem 0.75rem;
+  padding: 0.35rem 0.85rem;
   letter-spacing: 0.05em;
 }
 
@@ -625,22 +584,41 @@
 .personal-note {
   background: var(--bg-elevated);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1.5rem;
-  margin-top: 1.5rem;
+  padding: 2rem;
+  margin-top: 2rem;
 }
 
 .personal-note__text {
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   color: var(--text-muted);
   font-style: italic;
-  line-height: 1.7;
-  margin-bottom: 0.75rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
 }
 
 .personal-note__author {
-  font-size: 0.85rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
   color: var(--accent);
+}
+
+/* ============================================================================
+   PROPOSAL FOOTER
+   ============================================================================ */
+
+.proposal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.proposal-footer__text {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  letter-spacing: 0.05em;
+  line-height: 1.8;
 }
 
 /* ============================================================================
@@ -648,11 +626,7 @@
    ============================================================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  .slide-enter,
-  .slide-exit,
-  .slide-enter-back,
-  .slide-active {
-    animation: none;
+  .scroll-fade-up {
     opacity: 1;
     transform: none;
     transition: none;

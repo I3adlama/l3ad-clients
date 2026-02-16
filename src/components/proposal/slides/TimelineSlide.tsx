@@ -1,15 +1,15 @@
 import type { ProposalData } from "@/lib/types";
 
-const PHASE_ICONS = ["bi-rocket-takeoff", "bi-graph-up-arrow", "bi-cash-stack", "bi-handshake"];
+const PHASE_ICONS = ["bi-rocket-takeoff", "bi-graph-up-arrow", "bi-cash-stack", "bi-people-fill"];
 
 export default function TimelineSlide({ data }: { data: ProposalData }) {
   return (
-    <div className="proposal-slide">
-      <h2 className="slide-heading">WHAT HAPPENS &amp; WHEN</h2>
+    <section className="proposal-section">
+      <h1 className="scroll-fade-up section-heading text-center">WHAT HAPPENS &amp; WHEN</h1>
 
-      <div className="max-w-3xl space-y-0">
+      <div className="max-w-2xl mx-auto mt-8">
         {data.timeline.phases.map((phase, i) => (
-          <div key={i} className="timeline-phase">
+          <div key={i} className={`scroll-fade-up delay-${Math.min(i + 1, 4)} timeline-phase`}>
             {/* Marker */}
             <div className="timeline-phase__marker">
               <div className="timeline-phase__circle">
@@ -35,6 +35,6 @@ export default function TimelineSlide({ data }: { data: ProposalData }) {
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

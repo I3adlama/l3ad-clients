@@ -8,23 +8,21 @@ const SECTION_STYLES: Record<string, { barClass: string }> = {
 
 export default function ItemizedPricingSlide({ data }: { data: ProposalData }) {
   return (
-    <div className="proposal-slide">
-      <h2 className="slide-heading">WHAT YOU GET — ITEMIZED</h2>
+    <section className="proposal-section">
+      <h1 className="scroll-fade-up section-heading">WHAT YOU GET — ITEMIZED</h1>
 
-      <div className="max-w-4xl space-y-4">
+      <div className="space-y-5 mt-8">
         {data.itemized_pricing.sections.map((section, i) => {
           const style = SECTION_STYLES[section.category];
           const isOptional = section.category.toLowerCase().includes("optional");
 
           return (
-            <div key={i}>
-              {/* Section header bar */}
+            <div key={i} className={`scroll-fade-up delay-${Math.min(i + 1, 5)}`}>
               <div className={`pricing-bar ${isOptional ? "pricing-bar--orange" : style?.barClass || "pricing-bar--teal"}`}>
                 <span>{section.category}</span>
-                {section.subtotal && <span className="text-base font-display">{section.subtotal}</span>}
+                {section.subtotal && <span className="text-lg font-display">{section.subtotal}</span>}
               </div>
 
-              {/* Items */}
               {!isOptional && section.items.map((item, j) => (
                 <div
                   key={j}
@@ -35,7 +33,7 @@ export default function ItemizedPricingSlide({ data }: { data: ProposalData }) {
                     {item.name}
                   </span>
                   {item.price && (
-                    <span className="text-[var(--accent)] font-bold flex-shrink-0 ml-2">
+                    <span className="text-[var(--accent)] font-bold flex-shrink-0 ml-3">
                       {item.price}
                     </span>
                   )}
@@ -45,6 +43,6 @@ export default function ItemizedPricingSlide({ data }: { data: ProposalData }) {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
