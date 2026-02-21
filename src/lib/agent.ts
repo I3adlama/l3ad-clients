@@ -288,7 +288,23 @@ async function fetchPageContent(url: string): Promise<FetchResult> {
 function parseJSON<T>(text: string): T {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("No JSON found in response");
-  return JSON.parse(match[0]) as T;
+
+  let json = match[0];
+
+  // Clean common AI output issues before parsing:
+  // 1. Remove single-line JS comments (// ...) that aren't inside strings
+  json = json.replace(/,\s*\/\/[^\n]*/g, ",");  // after comma
+  json = json.replace(/\{\s*\/\/[^\n]*/g, "{");  // after opening brace
+  // 2. Remove trailing commas before } or ]
+  json = json.replace(/,\s*([\]}])/g, "$1");
+
+  try {
+    return JSON.parse(json) as T;
+  } catch (e) {
+    // Log the raw text for debugging, then rethrow
+    console.error("JSON parse failed. Raw model output (first 500 chars):", text.slice(0, 500));
+    throw e;
+  }
 }
 
 function getResponseText(response: Anthropic.Message): string {
