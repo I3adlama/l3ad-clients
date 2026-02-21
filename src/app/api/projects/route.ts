@@ -14,7 +14,7 @@ function slugify(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  return `${base}-${nanoid(4)}`;
+  return `${base}-${nanoid(4).toLowerCase()}`;
 }
 
 /** Normalize a URL: prepend https:// if missing, validate it parses */

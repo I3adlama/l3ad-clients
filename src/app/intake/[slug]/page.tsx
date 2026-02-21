@@ -49,8 +49,9 @@ export default async function IntakePage({ params }: PageProps) {
     );
   }
 
-  // Extract AI-discovered services if analysis exists
-  const aiServices: string[] = project.ai_analysis?.services || [];
+  // Extract AI-discovered services if analysis exists (AI may return string instead of array)
+  const rawServices = project.ai_analysis?.services;
+  const aiServices: string[] = Array.isArray(rawServices) ? rawServices : [];
 
   return (
     <IntakeWizard

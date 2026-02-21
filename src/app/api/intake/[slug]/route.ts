@@ -3,8 +3,8 @@ import { getDb } from "@/lib/db";
 import { z } from "zod";
 import { STEP_SECTIONS } from "@/lib/types";
 
-// Slug must be alphanumeric with dashes, max 120 chars
-const slugPattern = /^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]$/;
+// Slug must be alphanumeric with dashes, max 120 chars (nanoid suffixes may have uppercase)
+const slugPattern = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,118}[a-zA-Z0-9]$/;
 
 function validateSlug(slug: string): boolean {
   return slugPattern.test(slug) && slug.length <= 120;
