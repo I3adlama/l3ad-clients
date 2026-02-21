@@ -9,7 +9,7 @@ interface AiSuggestionProps {
   onChange: (value: string) => void;
   placeholder?: string;
   name?: string;
-  rows?: number;
+  minRows?: number;
 }
 
 export default function AiSuggestion({
@@ -19,7 +19,7 @@ export default function AiSuggestion({
   onChange,
   placeholder,
   name,
-  rows = 4,
+  minRows = 4,
 }: AiSuggestionProps) {
   // No AI suggestion — fall back to plain TextArea
   if (!aiSuggestion) {
@@ -30,7 +30,7 @@ export default function AiSuggestion({
         onChange={onChange}
         placeholder={placeholder}
         name={name}
-        rows={rows}
+        minRows={minRows}
       />
     );
   }
@@ -90,7 +90,7 @@ export default function AiSuggestion({
           onChange={onChange}
           placeholder={placeholder || "Write your own answer..."}
           name={name}
-          rows={rows}
+          minRows={minRows}
         />
       )}
     </div>

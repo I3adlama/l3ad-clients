@@ -3,7 +3,7 @@
 import TextInput from "@/components/ui/TextInput";
 import TextArea from "@/components/ui/TextArea";
 import AiSuggestion from "@/components/ui/AiSuggestion";
-import StepWrapper from "../StepWrapper";
+import SectionWrapper from "../SectionWrapper";
 
 interface YourStoryData {
   how_started?: string;
@@ -15,8 +15,6 @@ interface YourStoryData {
 interface Props {
   data: YourStoryData;
   onChange: (data: YourStoryData) => void;
-  onNext: () => void;
-  isSaving: boolean;
   aiPrefill?: {
     how_started?: string;
     years_in_business?: string;
@@ -24,19 +22,15 @@ interface Props {
   };
 }
 
-export default function YourStoryStep({ data, onChange, onNext, isSaving, aiPrefill }: Props) {
+export default function YourStoryStep({ data, onChange, aiPrefill }: Props) {
   function update(field: keyof YourStoryData, value: string) {
     onChange({ ...data, [field]: value });
   }
 
   return (
-    <StepWrapper
+    <SectionWrapper
       title="Your Story"
       subtitle="We want to get to know you and your business."
-      onNext={onNext}
-      isFirst
-      isLast={false}
-      isSaving={isSaving}
     >
       <TextArea
         label="How did you get into this business?"
@@ -70,6 +64,6 @@ export default function YourStoryStep({ data, onChange, onNext, isSaving, aiPref
         placeholder="Why should someone pick you over the competition?"
         name="differentiator"
       />
-    </StepWrapper>
+    </SectionWrapper>
   );
 }

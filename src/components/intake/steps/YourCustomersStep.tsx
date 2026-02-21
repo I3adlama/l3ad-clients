@@ -3,7 +3,7 @@
 import TextArea from "@/components/ui/TextArea";
 import CheckboxGroup from "@/components/ui/CheckboxGroup";
 import AiSuggestion from "@/components/ui/AiSuggestion";
-import StepWrapper from "../StepWrapper";
+import SectionWrapper from "../SectionWrapper";
 
 const DISCOVERY_OPTIONS = [
   { value: "Word of mouth", label: "Word of mouth" },
@@ -25,29 +25,21 @@ interface YourCustomersData {
 interface Props {
   data: YourCustomersData;
   onChange: (data: YourCustomersData) => void;
-  onNext: () => void;
-  onBack: () => void;
-  isSaving: boolean;
   aiPrefill?: {
     ideal_customer?: string;
     how_they_find_you?: string[];
   };
 }
 
-export default function YourCustomersStep({ data, onChange, onNext, onBack, isSaving, aiPrefill }: Props) {
+export default function YourCustomersStep({ data, onChange, aiPrefill }: Props) {
   function update<K extends keyof YourCustomersData>(field: K, value: YourCustomersData[K]) {
     onChange({ ...data, [field]: value });
   }
 
   return (
-    <StepWrapper
+    <SectionWrapper
       title="Your Customers"
       subtitle="Help us understand who you're trying to reach."
-      onNext={onNext}
-      onBack={onBack}
-      isFirst={false}
-      isLast={false}
-      isSaving={isSaving}
     >
       <AiSuggestion
         label="Who's your ideal customer?"
@@ -58,21 +50,23 @@ export default function YourCustomersStep({ data, onChange, onNext, onBack, isSa
         name="ideal_customer"
       />
 
-      <CheckboxGroup
-        label="How do most customers find you right now?"
-        options={DISCOVERY_OPTIONS}
-        selected={data.how_they_find_you || []}
-        onChange={(v) => update("how_they_find_you", v)}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <CheckboxGroup
+          label="How do most customers find you right now?"
+          options={DISCOVERY_OPTIONS}
+          selected={data.how_they_find_you || []}
+          onChange={(v) => update("how_they_find_you", v)}
+        />
 
-      <TextArea
-        label="Is there a type of customer or job you'd love to get more of?"
-        value={data.want_more_of || ""}
-        onChange={(v) => update("want_more_of", v)}
-        placeholder="Maybe bigger jobs, a specific neighborhood, commercial work..."
-        name="want_more_of"
-        rows={3}
-      />
-    </StepWrapper>
+        <TextArea
+          label="Is there a type of customer or job you'd love to get more of?"
+          value={data.want_more_of || ""}
+          onChange={(v) => update("want_more_of", v)}
+          placeholder="Maybe bigger jobs, a specific neighborhood, commercial work..."
+          name="want_more_of"
+          minRows={3}
+        />
+      </div>
+    </SectionWrapper>
   );
 }

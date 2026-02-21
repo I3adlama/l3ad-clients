@@ -1,7 +1,7 @@
 "use client";
 
 import type { UploadedFile } from "@/lib/types";
-import StepWrapper from "../StepWrapper";
+import SectionWrapper from "../SectionWrapper";
 import DarkLightPicker from "../DarkLightPicker";
 import BrandPersonalityPicker from "../BrandPersonalityPicker";
 import StylePicker, {
@@ -83,105 +83,105 @@ interface YourBrandData {
 interface Props {
   data: YourBrandData;
   onChange: (data: YourBrandData) => void;
-  onNext: () => void;
-  onBack: () => void;
-  isSaving: boolean;
   slug: string;
 }
 
-export default function YourBrandStep({ data, onChange, onNext, onBack, isSaving, slug }: Props) {
+export default function YourBrandStep({ data, onChange, slug }: Props) {
   function update<K extends keyof YourBrandData>(field: K, value: YourBrandData[K]) {
     onChange({ ...data, [field]: value });
   }
 
   return (
-    <StepWrapper
+    <SectionWrapper
       title="Your Brand"
       subtitle="Pick what speaks to you. There are no wrong answers."
-      onNext={onNext}
-      onBack={onBack}
-      isFirst={false}
-      isLast={false}
-      isSaving={isSaving}
     >
-      <DarkLightPicker
-        selected={data.dark_or_light || ""}
-        onChange={(v) => update("dark_or_light", v)}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <DarkLightPicker
+          selected={data.dark_or_light || ""}
+          onChange={(v) => update("dark_or_light", v)}
+        />
+
+        {/* Brand colors */}
+        <div>
+          <span className="input-label">Do you already have brand colors?</span>
+          <div className="flex gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => update("has_brand_colors", true)}
+              className={`px-4 py-2 rounded-md border text-sm transition-colors ${
+                data.has_brand_colors === true
+                  ? "border-[var(--border-accent)] bg-accent/5 text-white"
+                  : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                update("has_brand_colors", false);
+                update("brand_colors", []);
+              }}
+              className={`px-4 py-2 rounded-md border text-sm transition-colors ${
+                data.has_brand_colors === false
+                  ? "border-[var(--border-accent)] bg-accent/5 text-white"
+                  : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
+              }`}
+            >
+              No
+            </button>
+          </div>
+
+          {data.has_brand_colors && (
+            <div className="mt-3">
+              <ColorInput
+                colors={data.brand_colors || []}
+                onChange={(c) => update("brand_colors", c)}
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
       <BrandPersonalityPicker
         selected={data.brand_personality || []}
         onChange={(v) => update("brand_personality", v)}
       />
 
-      {/* Brand colors */}
-      <div>
-        <span className="input-label">Do you already have brand colors?</span>
-        <div className="flex gap-2 mt-1">
-          <button
-            type="button"
-            onClick={() => update("has_brand_colors", true)}
-            className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-              data.has_brand_colors === true
-                ? "border-[var(--border-accent)] bg-accent/5 text-white"
-                : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
-            }`}
-          >
-            Yes
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              update("has_brand_colors", false);
-              update("brand_colors", []);
-            }}
-            className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-              data.has_brand_colors === false
-                ? "border-[var(--border-accent)] bg-accent/5 text-white"
-                : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
-            }`}
-          >
-            No
-          </button>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <StylePicker
+          label="Which of these feels closest to what you want?"
+          options={WEBSITE_STYLES}
+          selected={data.website_style || ""}
+          onSelect={(v) => update("website_style", v)}
+        />
+
+        <StylePicker
+          label="What colors feel right for your brand?"
+          options={COLOR_MOODS}
+          selected={data.color_mood || ""}
+          onSelect={(v) => update("color_mood", v)}
+        />
       </div>
 
-      {data.has_brand_colors && (
-        <ColorInput
-          colors={data.brand_colors || []}
-          onChange={(c) => update("brand_colors", c)}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <UrlInput
+          label="Any websites you love the look of? (up to 3)"
+          urls={data.inspiration_urls || []}
+          onChange={(u) => update("inspiration_urls", u)}
+          max={3}
+          placeholder="https://a-website-you-love.com"
         />
-      )}
 
-      <StylePicker
-        label="Which of these feels closest to what you want?"
-        options={WEBSITE_STYLES}
-        selected={data.website_style || ""}
-        onSelect={(v) => update("website_style", v)}
-      />
-
-      <StylePicker
-        label="What colors feel right for your brand?"
-        options={COLOR_MOODS}
-        selected={data.color_mood || ""}
-        onSelect={(v) => update("color_mood", v)}
-      />
-
-      <UrlInput
-        label="Any websites you love the look of? (up to 3)"
-        urls={data.inspiration_urls || []}
-        onChange={(u) => update("inspiration_urls", u)}
-        max={3}
-        placeholder="https://a-website-you-love.com"
-      />
-
-      <FileUpload
-        label="Got any images that show the vibe? Logos, screenshots, anything"
-        files={data.uploads || []}
-        onChange={(f) => update("uploads", f)}
-        uploadUrl={`/api/intake/${slug}/upload`}
-        max={3}
-      />
-    </StepWrapper>
+        <FileUpload
+          label="Got any images that show the vibe? Logos, screenshots, anything"
+          files={data.uploads || []}
+          onChange={(f) => update("uploads", f)}
+          uploadUrl={`/api/intake/${slug}/upload`}
+          max={3}
+        />
+      </div>
+    </SectionWrapper>
   );
 }

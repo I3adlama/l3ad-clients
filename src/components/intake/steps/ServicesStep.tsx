@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import RadioGroup from "@/components/ui/RadioGroup";
 import AiSuggestion from "@/components/ui/AiSuggestion";
 import RadiusSlider from "@/components/ui/RadiusSlider";
-import StepWrapper from "../StepWrapper";
+import SectionWrapper from "../SectionWrapper";
 
 interface ServicesData {
   main_services?: string[];
@@ -19,9 +19,6 @@ interface ServicesData {
 interface Props {
   data: ServicesData;
   onChange: (data: ServicesData) => void;
-  onNext: () => void;
-  onBack: () => void;
-  isSaving: boolean;
   aiServices?: string[];
   aiPrefill?: {
     main_services?: string[];
@@ -34,9 +31,6 @@ interface Props {
 export default function ServicesStep({
   data,
   onChange,
-  onNext,
-  onBack,
-  isSaving,
   aiServices,
   aiPrefill,
   location,
@@ -68,14 +62,9 @@ export default function ServicesStep({
   }
 
   return (
-    <StepWrapper
+    <SectionWrapper
       title="Services"
       subtitle="What do you do? Let us know everything."
-      onNext={onNext}
-      onBack={onBack}
-      isFirst={false}
-      isLast={false}
-      isSaving={isSaving}
     >
       {/* AI-discovered services verification */}
       {hasAiServices && (
@@ -154,54 +143,56 @@ export default function ServicesStep({
         onChange={(v) => update("specialty", v)}
         placeholder="The work you're best known for..."
         name="specialty"
-        rows={3}
+        minRows={3}
       />
 
-      <RadiusSlider
-        label="What areas do you serve?"
-        value={data.service_area || "25 miles"}
-        onChange={(v) => update("service_area", v)}
-        location={location}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <RadiusSlider
+          label="What areas do you serve?"
+          value={data.service_area || "25 miles"}
+          onChange={(v) => update("service_area", v)}
+          location={location}
+        />
 
-      {/* Pricing research opt-in */}
-      <div>
-        <span className="input-label">
-          Would you like us to research competitor pricing in your area?
-        </span>
-        <p className="text-[var(--text-soft)] text-xs mb-2">
-          We&apos;ll analyze what competitors charge and suggest pricing for your services
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setShowPricing(true);
-              update("wants_pricing_research", true);
-            }}
-            className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-              showPricing
-                ? "border-[var(--border-accent)] bg-accent/5 text-white"
-                : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
-            }`}
-          >
-            Yes, please!
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowPricing(false);
-              update("wants_pricing_research", false);
-              update("target_margin", undefined);
-            }}
-            className={`px-4 py-2 rounded-md border text-sm transition-colors ${
-              !showPricing && data.wants_pricing_research !== undefined
-                ? "border-[var(--border-accent)] bg-accent/5 text-white"
-                : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
-            }`}
-          >
-            No thanks
-          </button>
+        {/* Pricing research opt-in */}
+        <div>
+          <span className="input-label">
+            Would you like us to research competitor pricing in your area?
+          </span>
+          <p className="text-[var(--text-soft)] text-xs mb-2">
+            We&apos;ll analyze what competitors charge and suggest pricing for your services
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPricing(true);
+                update("wants_pricing_research", true);
+              }}
+              className={`px-4 py-2 rounded-md border text-sm transition-colors ${
+                showPricing
+                  ? "border-[var(--border-accent)] bg-accent/5 text-white"
+                  : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
+              }`}
+            >
+              Yes, please!
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowPricing(false);
+                update("wants_pricing_research", false);
+                update("target_margin", undefined);
+              }}
+              className={`px-4 py-2 rounded-md border text-sm transition-colors ${
+                !showPricing && data.wants_pricing_research !== undefined
+                  ? "border-[var(--border-accent)] bg-accent/5 text-white"
+                  : "border-[var(--border)] bg-noir-800 text-[var(--text-muted)] hover:border-[var(--border-strong)]"
+              }`}
+            >
+              No thanks
+            </button>
+          </div>
         </div>
       </div>
 
@@ -217,6 +208,6 @@ export default function ServicesStep({
           onChange={(v) => update("target_margin", v)}
         />
       )}
-    </StepWrapper>
+    </SectionWrapper>
   );
 }

@@ -116,6 +116,7 @@ a, button {
   background-color: #000;
   min-height: 100vh;
   position: relative;
+  overflow-x: hidden;
 }
 
 /* Manga-style screentone halftone dots */
@@ -209,33 +210,6 @@ a, button {
   color: var(--text-muted);
   margin-bottom: 6px;
   letter-spacing: 0.02em;
-}
-
-/* ============================================================================
-   WIZARD TRANSITIONS
-   ============================================================================ */
-
-.step-enter {
-  opacity: 0;
-  transform: translateX(40px);
-}
-
-.step-active {
-  opacity: 1;
-  transform: translateX(0);
-  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.step-exit {
-  opacity: 0;
-  transform: translateX(-40px);
-  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
-}
-
-.step-enter-back {
-  opacity: 0;
-  transform: translateX(-40px);
 }
 
 /* ============================================================================

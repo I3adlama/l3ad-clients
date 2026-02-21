@@ -61,7 +61,7 @@ export default function ProjectForm() {
         onChange={setNotes}
         placeholder="Any context — business type, location, what they need help with..."
         name="notes"
-        rows={3}
+        minRows={3}
       />
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
