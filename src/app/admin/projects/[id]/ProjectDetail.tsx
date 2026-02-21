@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Project, IntakeResponses } from "@/lib/types";
 import { STEP_LABELS } from "@/lib/types";
 import type { BusinessAnalysis } from "@/lib/agent";
@@ -22,11 +23,13 @@ interface Props {
 }
 
 export default function ProjectDetail({ projectId }: Props) {
+  const router = useRouter();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const autoTriggered = useRef(false);
 
   const fetchProject = useCallback(async () => {
@@ -101,6 +104,19 @@ export default function ProjectDetail({ projectId }: Props) {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function handleDelete() {
+    if (!confirm("Delete this project? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/admin");
+      }
+    } catch {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -114,9 +130,18 @@ export default function ProjectDetail({ projectId }: Props) {
             {project.location && <span>{project.location}</span>}
           </div>
         </div>
-        <BevelButton href="/admin" variant="secondary" size="sm">
-          Back
-        </BevelButton>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+          <BevelButton href="/admin" variant="secondary" size="sm">
+            Back
+          </BevelButton>
+        </div>
       </div>
 
       {/* Intake Link */}

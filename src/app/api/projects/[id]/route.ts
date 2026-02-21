@@ -32,3 +32,27 @@ export async function GET(
 
   return NextResponse.json(projects[0]);
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await verifySession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const sql = getDb();
+
+  // intake_responses cascade-deletes via FK
+  const result = await sql`
+    DELETE FROM projects WHERE id = ${id}::uuid RETURNING id
+  `;
+
+  if (result.length === 0) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
+}

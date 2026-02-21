@@ -292,9 +292,10 @@ function parseJSON<T>(text: string): T {
   let json = match[0];
 
   // Clean common AI output issues before parsing:
-  // 1. Remove single-line JS comments (// ...) that aren't inside strings
-  json = json.replace(/,\s*\/\/[^\n]*/g, ",");  // after comma
-  json = json.replace(/\{\s*\/\/[^\n]*/g, "{");  // after opening brace
+  // 1. Remove single-line JS comments (// ...) outside of quoted strings
+  json = json.replace(/"(?:[^"\\]|\\.)*"|\/\/[^\n]*/g, (m) =>
+    m.startsWith('"') ? m : ""
+  );
   // 2. Remove trailing commas before } or ]
   json = json.replace(/,\s*([\]}])/g, "$1");
 
@@ -317,6 +318,20 @@ async function callModel(model: string, maxTokens: number, prompt: string): Prom
     max_tokens: maxTokens,
     messages: [{ role: "user", content: prompt }],
   });
+
+  if (response.stop_reason === "max_tokens") {
+    console.warn(`Model ${model} hit max_tokens (${maxTokens}) — output truncated, retrying with 2x`);
+    const retry = await client.messages.create({
+      model,
+      max_tokens: maxTokens * 2,
+      messages: [{ role: "user", content: prompt }],
+    });
+    if (retry.stop_reason === "max_tokens") {
+      console.error(`Model ${model} still truncated at ${maxTokens * 2} tokens`);
+    }
+    return getResponseText(retry);
+  }
+
   return getResponseText(response);
 }
 

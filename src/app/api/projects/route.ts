@@ -28,11 +28,16 @@ function normalizeUrl(raw: string): string {
   return url;
 }
 
-/** Extract a display name from a domain: "smalltownscreening.com" → "Smalltownscreening" */
+/** Extract a display name from a domain: "smalltownscreening.com" → "Small Town Screening" */
 function nameFromDomain(url: string): string {
   const hostname = new URL(url).hostname.replace(/^www\./, "");
-  const name = hostname.split(".")[0];
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  const raw = hostname.split(".")[0];
+  // Split on hyphens, underscores, and camelCase boundaries
+  const words = raw
+    .replace(/[-_]+/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .split(/\s+/);
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 }
 
 /** Detect a platform name from a URL hostname */
