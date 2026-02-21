@@ -2,23 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SocialUrl } from "@/lib/types";
 import TextInput from "@/components/ui/TextInput";
 import TextArea from "@/components/ui/TextArea";
 import BevelButton from "@/components/ui/BevelButton";
-import SocialUrlInput from "./SocialUrlInput";
 
 export default function ProjectForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [clientName, setClientName] = useState("");
-  const [businessType, setBusinessType] = useState("");
-  const [location, setLocation] = useState("");
-  const [socialUrls, setSocialUrls] = useState<SocialUrl[]>([
-    { platform: "Facebook", url: "" },
-  ]);
+  const [url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -27,16 +20,11 @@ export default function ProjectForm() {
     setLoading(true);
 
     try {
-      const filteredUrls = socialUrls.filter((u) => u.url.trim() !== "");
-
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_name: clientName,
-          business_type: businessType || undefined,
-          location: location || undefined,
-          social_urls: filteredUrls,
+          url: url.trim(),
           notes: notes || undefined,
         }),
       });
@@ -59,38 +47,19 @@ export default function ProjectForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <TextInput
-        label="Client Name"
-        value={clientName}
-        onChange={setClientName}
-        placeholder="e.g. Small Town Screening"
+        label="Website URL"
+        value={url}
+        onChange={setUrl}
+        placeholder="e.g. smalltownscreening.com"
         required
-        name="client_name"
+        name="url"
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <TextInput
-          label="Business Type"
-          value={businessType}
-          onChange={setBusinessType}
-          placeholder="e.g. Screen Enclosures"
-          name="business_type"
-        />
-        <TextInput
-          label="Location"
-          value={location}
-          onChange={setLocation}
-          placeholder="e.g. Titusville, FL"
-          name="location"
-        />
-      </div>
-
-      <SocialUrlInput urls={socialUrls} onChange={setSocialUrls} />
-
       <TextArea
-        label="Notes"
+        label="Notes (optional)"
         value={notes}
         onChange={setNotes}
-        placeholder="Any context about this client..."
+        placeholder="Any context — business type, location, what they need help with..."
         name="notes"
         rows={3}
       />

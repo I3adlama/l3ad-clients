@@ -37,6 +37,12 @@ export async function runMigrations() {
     ADD COLUMN IF NOT EXISTS ai_analysis JSONB
   `;
 
+  // Add source_url column for URL-first project creation flow
+  await sql`
+    ALTER TABLE projects
+    ADD COLUMN IF NOT EXISTS source_url TEXT
+  `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS proposals (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

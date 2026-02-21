@@ -5,13 +5,7 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 
 const CreateProjectSchema = z.object({
-  client_name: z.string().min(1, "Client name is required"),
-  business_type: z.string().optional().default(""),
-  location: z.string().optional().default(""),
-  social_urls: z
-    .array(z.object({ platform: z.string(), url: z.string().url() }))
-    .optional()
-    .default([]),
+  url: z.string().min(1, "URL is required"),
   notes: z.string().optional().default(""),
 });
 
@@ -21,6 +15,54 @@ function slugify(name: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   return `${base}-${nanoid(4)}`;
+}
+
+/** Normalize a URL: prepend https:// if missing, validate it parses */
+function normalizeUrl(raw: string): string {
+  let url = raw.trim();
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  // Validate it parses
+  new URL(url);
+  return url;
+}
+
+/** Extract a display name from a domain: "smalltownscreening.com" → "Smalltownscreening" */
+function nameFromDomain(url: string): string {
+  const hostname = new URL(url).hostname.replace(/^www\./, "");
+  const name = hostname.split(".")[0];
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** Detect a platform name from a URL hostname */
+const PLATFORM_MAP: Record<string, string> = {
+  "facebook.com": "Facebook",
+  "instagram.com": "Instagram",
+  "linkedin.com": "LinkedIn",
+  "twitter.com": "Twitter",
+  "x.com": "Twitter",
+  "youtube.com": "YouTube",
+  "tiktok.com": "TikTok",
+  "yelp.com": "Yelp",
+  "nextdoor.com": "Nextdoor",
+  "bbb.org": "BBB",
+  "homeadvisor.com": "HomeAdvisor",
+  "houzz.com": "Houzz",
+  "thumbtack.com": "Thumbtack",
+  "angieslist.com": "Angie's List",
+  "angi.com": "Angi",
+  "google.com": "Google Business",
+};
+
+function detectPlatform(url: string): string {
+  const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  for (const [domain, platform] of Object.entries(PLATFORM_MAP)) {
+    if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+      return platform;
+    }
+  }
+  return "Website";
 }
 
 export async function GET() {
@@ -51,17 +93,30 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const data = CreateProjectSchema.parse(body);
-    const slug = slugify(data.client_name);
+
+    let sourceUrl: string;
+    try {
+      sourceUrl = normalizeUrl(data.url);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid URL. Enter a website address like smalltownscreening.com" },
+        { status: 400 }
+      );
+    }
+
+    const tempName = nameFromDomain(sourceUrl);
+    const platform = detectPlatform(sourceUrl);
+    const slug = slugify(tempName);
+    const socialUrls = JSON.stringify([{ platform, url: sourceUrl }]);
     const sql = getDb();
 
     const [project] = await sql`
-      INSERT INTO projects (slug, client_name, business_type, location, social_urls, notes)
+      INSERT INTO projects (slug, client_name, source_url, social_urls, notes)
       VALUES (
         ${slug},
-        ${data.client_name},
-        ${data.business_type || null},
-        ${data.location || null},
-        ${JSON.stringify(data.social_urls)},
+        ${tempName},
+        ${sourceUrl},
+        ${socialUrls}::jsonb,
         ${data.notes || null}
       )
       RETURNING *

@@ -5,9 +5,9 @@ const client = new Anthropic({ apiKey: process.env.AGENT_1 });
 
 // Latest models — optimized for cost and quality
 const MODELS = {
-  fast: "claude-haiku-4-5-20251001",     // $1/$5  — extraction grunt work
-  balanced: "claude-sonnet-4-5-20250929", // $3/$15 — creative generation
-  quality: "claude-opus-4-6",            // $5/$25 — strategy + final approval
+  fast: "claude-haiku-4-5-20251001", // $1/$5  — extraction grunt work
+  balanced: "claude-sonnet-4-6",     // $3/$15 — creative generation
+  quality: "claude-opus-4-6",        // $5/$25 — strategy + final approval
 } as const;
 
 // ============================================================================
@@ -26,6 +26,7 @@ export interface BusinessAnalysis {
   strengths: string[];
   suggested_questions: SuggestedQuestion[];
   prefill: PrefillData;
+  discovered_social_urls?: { platform: string; url: string }[];
   _meta: AnalysisMeta;
 }
 
@@ -83,6 +84,12 @@ interface OpusPlan {
   strategy_notes: string;
 }
 
+// Extended plan for URL-first flow — Opus also discovers business identity
+interface OpusPlanFromUrl extends OpusPlan {
+  discovered_name: string;
+  discovered_location: string;
+}
+
 // Haiku extraction from Step 2
 interface RawExtraction {
   business_name: string;
@@ -113,6 +120,11 @@ interface OpusApproval {
     add?: SuggestedQuestion;
   }[];
   notes: string;
+}
+
+interface FetchResult {
+  content: string;
+  discoveredLinks: { platform: string; url: string }[];
 }
 
 // ============================================================================
@@ -155,10 +167,78 @@ function validateUrl(url: string): void {
 }
 
 // ============================================================================
+// LINK EXTRACTION
+// ============================================================================
+
+const SOCIAL_DOMAINS: Record<string, string> = {
+  "facebook.com": "Facebook",
+  "instagram.com": "Instagram",
+  "linkedin.com": "LinkedIn",
+  "twitter.com": "Twitter",
+  "x.com": "Twitter",
+  "youtube.com": "YouTube",
+  "tiktok.com": "TikTok",
+  "yelp.com": "Yelp",
+  "nextdoor.com": "Nextdoor",
+  "bbb.org": "BBB",
+  "homeadvisor.com": "HomeAdvisor",
+  "houzz.com": "Houzz",
+  "thumbtack.com": "Thumbtack",
+  "angieslist.com": "Angie's List",
+  "angi.com": "Angi",
+  "google.com": "Google Business",
+};
+
+/** Extract recognized social/business profile links from raw HTML */
+function extractLinksFromHtml(html: string, sourceHost: string): { platform: string; url: string }[] {
+  const linkRegex = /href=["']([^"']+)["']/gi;
+  const seen = new Set<string>();
+  const results: { platform: string; url: string }[] = [];
+
+  let match;
+  while ((match = linkRegex.exec(html)) !== null) {
+    const href = match[1];
+    let parsed: URL;
+    try {
+      parsed = new URL(href, `https://${sourceHost}`);
+    } catch {
+      continue;
+    }
+
+    if (!["http:", "https:"].includes(parsed.protocol)) continue;
+
+    const hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
+
+    // Skip same-site links
+    if (hostname === sourceHost.replace(/^www\./, "").toLowerCase()) continue;
+
+    // Check if this is a recognized social/business domain
+    let platform: string | null = null;
+    for (const [domain, name] of Object.entries(SOCIAL_DOMAINS)) {
+      if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+        platform = name;
+        break;
+      }
+    }
+
+    if (!platform) continue;
+
+    // Deduplicate by full URL (strip trailing slash for consistency)
+    const normalized = parsed.href.replace(/\/$/, "");
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+
+    results.push({ platform, url: parsed.href });
+  }
+
+  return results;
+}
+
+// ============================================================================
 // UTILITIES
 // ============================================================================
 
-async function fetchPageContent(url: string): Promise<string> {
+async function fetchPageContent(url: string): Promise<FetchResult> {
   try {
     validateUrl(url);
 
@@ -178,10 +258,14 @@ async function fetchPageContent(url: string): Promise<string> {
     clearTimeout(timeout);
 
     if (!res.ok) {
-      return `[Failed to fetch: HTTP ${res.status}]`;
+      return { content: `[Failed to fetch: HTTP ${res.status}]`, discoveredLinks: [] };
     }
 
     const html = await res.text();
+
+    // Extract links from raw HTML before stripping tags
+    const sourceHost = new URL(url).hostname;
+    const discoveredLinks = extractLinksFromHtml(html, sourceHost);
 
     const cleaned = html
       .replace(/<script[\s\S]*?<\/script>/gi, "")
@@ -191,10 +275,13 @@ async function fetchPageContent(url: string): Promise<string> {
       .trim()
       .slice(0, 8000);
 
-    return cleaned || "[Page loaded but no text content found]";
+    return {
+      content: cleaned || "[Page loaded but no text content found]",
+      discoveredLinks,
+    };
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
-    return `[Failed to fetch: ${msg}]`;
+    return { content: `[Failed to fetch: ${msg}]`, discoveredLinks: [] };
   }
 }
 
@@ -260,6 +347,49 @@ Based on what you can see, draft an extraction strategy. Return ONLY a JSON obje
 Think like a strategist, not a data entry clerk. What matters for building THIS client a website that actually gets them customers?`);
 
   return { plan: parseJSON<OpusPlan>(text), model };
+}
+
+// ============================================================================
+// STEP 1 (URL-first): OPUS — Discover business identity + draft strategy
+// ============================================================================
+
+async function opusDraftPlanFromUrl(
+  sourceUrl: string,
+  notes: string,
+  pagesSummary: string,
+  discoveredLinks: { platform: string; url: string }[]
+): Promise<{ plan: OpusPlanFromUrl; model: string }> {
+  const linksText = discoveredLinks.length > 0
+    ? `\nDISCOVERED LINKS FROM WEBSITE:\n${discoveredLinks.map(l => `- ${l.platform}: ${l.url}`).join("\n")}`
+    : "\nNo social/business links discovered on the website.";
+
+  const { text, model } = await callManager(1200, `You are the senior strategist at L3ad Solutions, a web design agency. A potential client's website URL was just submitted. Your job is to:
+1. IDENTIFY the business (name, location, type) from the page content
+2. Draft an extraction strategy for the team
+
+SOURCE URL: ${sourceUrl}
+${notes ? `ADMIN NOTES: ${notes}` : ""}
+${linksText}
+
+PAGE CONTENT PREVIEW (first 2000 chars of each page):
+${pagesSummary}
+
+Return ONLY a JSON object:
+{
+  "discovered_name": "the actual business name found on the website",
+  "discovered_location": "city, state — best guess from content, addresses, service areas, phone area codes",
+  "business_category": "specific business category (e.g. 'residential screen enclosure contractor', not just 'contractor')",
+  "extraction_focus": ["the 5-8 most important things to extract for THIS type of business"],
+  "key_questions": ["3-5 questions we MUST answer from the data"],
+  "look_for": ["specific details to hunt for: certifications, service area, pricing signals, team info, years in business, etc."],
+  "red_flags": ["things that seem off, inconsistent, or need verification"],
+  "strategy_notes": "2-3 sentences about how to position this business"
+}
+
+IMPORTANT: discovered_name should be the ACTUAL business name as it appears on the site (not a domain slug). If you can't find a clear name, use a cleaned-up version of the domain.
+discovered_location should be their primary location. Look for addresses, "serving X area", phone area codes, Google Maps embeds, etc.`);
+
+  return { plan: parseJSON<OpusPlanFromUrl>(text), model };
 }
 
 // ============================================================================
@@ -516,6 +646,7 @@ function applyCorrections(analysis: BusinessAnalysis, approval: OpusApproval): B
 
 // ============================================================================
 // MAIN PIPELINE: Opus Plan → Haiku Extract → Sonnet Generate → Opus Approve
+// (Legacy path — used when project has manually-entered social URLs)
 // ============================================================================
 
 export async function analyzeBusinessLinks(
@@ -527,7 +658,7 @@ export async function analyzeBusinessLinks(
   // Fetch all URLs in parallel
   const pageResults = await Promise.all(
     urls.map(async (link) => {
-      const content = await fetchPageContent(link.url);
+      const { content } = await fetchPageContent(link.url);
       return { platform: link.platform, url: link.url, content };
     })
   );
@@ -584,6 +715,101 @@ export async function analyzeBusinessLinks(
   analysis._meta = {
     models_used: modelsUsed,
     pages_fetched: pageResults.length,
+    pages_with_content: pagesWithContent,
+    follow_up_performed: !!followUpData,
+    quality_score: approval.quality_score,
+    approved: approval.approved,
+    approval_notes: approval.notes,
+  };
+
+  return analysis;
+}
+
+// ============================================================================
+// URL-FIRST PIPELINE: Discover business from a single URL + notes
+// ============================================================================
+
+export async function analyzeFromUrl(
+  sourceUrl: string,
+  notes: string
+): Promise<BusinessAnalysis> {
+  // 1. Fetch the source URL and extract discovered links
+  const { content: sourceContent, discoveredLinks } = await fetchPageContent(sourceUrl);
+
+  // 2. Fetch up to 5 discovered links in parallel
+  const linksToFetch = discoveredLinks.slice(0, 5);
+  const linkedResults = await Promise.all(
+    linksToFetch.map(async (link) => {
+      const { content } = await fetchPageContent(link.url);
+      return { platform: link.platform, url: link.url, content };
+    })
+  );
+
+  // Combine source page + discovered pages
+  const allPages = [
+    { platform: "Website", url: sourceUrl, content: sourceContent },
+    ...linkedResults,
+  ];
+
+  const pagesContext = allPages
+    .map((p) => `--- ${p.platform} (${p.url}) ---\n${p.content}`)
+    .join("\n\n");
+
+  const pagesWithContent = allPages.filter(
+    (p) => !p.content.startsWith("[Failed") && !p.content.startsWith("[Page loaded but no")
+  ).length;
+
+  const pagesSummary = allPages
+    .map((p) => `--- ${p.platform} ---\n${p.content.slice(0, 2000)}`)
+    .join("\n\n");
+
+  const modelsUsed: string[] = [];
+
+  // STEP 1: Opus — Discover business identity + draft strategy
+  const { plan, model: planModel } = await opusDraftPlanFromUrl(
+    sourceUrl, notes, pagesSummary, discoveredLinks
+  );
+  modelsUsed.push(planModel);
+
+  const clientName = plan.discovered_name || "Unknown Business";
+  const location = plan.discovered_location || "";
+
+  // STEP 2: Haiku — Execute targeted extraction
+  const extraction = await haikuExtract(clientName, "", location, pagesContext, plan);
+  modelsUsed.push(MODELS.fast);
+
+  // STEP 2b: Follow-up if confidence is low
+  let followUpData: string | undefined;
+  if (extraction.confidence === "low" && pagesWithContent > 0 && extraction.data_gaps.length > 0) {
+    const followUp = await haikuFollowUp(
+      `Fill these gaps: ${extraction.data_gaps.join(", ")}. ${plan.extraction_focus.slice(0, 3).join(", ")}`,
+      pagesContext,
+      extraction
+    );
+    if (!followUp.includes("No additional data found")) {
+      followUpData = followUp;
+      modelsUsed.push(MODELS.fast);
+    }
+  }
+
+  // STEP 3: Sonnet — Generate polished analysis
+  const draft = await sonnetGenerate(clientName, location, extraction, plan, followUpData);
+  modelsUsed.push(MODELS.balanced);
+
+  // STEP 4: Opus — Final review and approval
+  const { approval, model: approvalModel } = await opusApprove(clientName, plan, extraction, draft);
+  modelsUsed.push(approvalModel);
+
+  // Apply corrections
+  const analysis = applyCorrections(draft, approval);
+
+  // Attach discovered social URLs for the caller to persist
+  analysis.discovered_social_urls = discoveredLinks;
+
+  // Attach metadata
+  analysis._meta = {
+    models_used: modelsUsed,
+    pages_fetched: allPages.length,
     pages_with_content: pagesWithContent,
     follow_up_performed: !!followUpData,
     quality_score: approval.quality_score,

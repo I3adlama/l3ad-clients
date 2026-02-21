@@ -6,6 +6,7 @@ export interface Project {
   location: string | null;
   social_urls: SocialUrl[];
   notes: string | null;
+  source_url: string | null;
   status: "draft" | "sent" | "in_progress" | "completed";
   created_at: string;
   updated_at: string;
@@ -95,10 +96,7 @@ export interface IntakeResponses {
 }
 
 export interface CreateProjectPayload {
-  client_name: string;
-  business_type?: string;
-  location?: string;
-  social_urls?: SocialUrl[];
+  url: string;
   notes?: string;
 }
 

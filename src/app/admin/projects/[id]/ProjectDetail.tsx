@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Project, IntakeResponses } from "@/lib/types";
 import { STEP_LABELS } from "@/lib/types";
 import type { BusinessAnalysis } from "@/lib/agent";
@@ -27,18 +27,21 @@ export default function ProjectDetail({ projectId }: Props) {
   const [copied, setCopied] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
+  const autoTriggered = useRef(false);
 
-  useEffect(() => {
-    fetch(`/api/projects/${projectId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setProject(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+  const fetchProject = useCallback(async () => {
+    const res = await fetch(`/api/projects/${projectId}`);
+    if (res.ok) {
+      const data = await res.json();
+      setProject(data);
+    }
   }, [projectId]);
 
-  async function handleAnalyze() {
+  useEffect(() => {
+    fetchProject().finally(() => setLoading(false));
+  }, [fetchProject]);
+
+  const handleAnalyze = useCallback(async () => {
     setAnalyzing(true);
     setAnalyzeError("");
 
@@ -53,16 +56,28 @@ export default function ProjectDetail({ projectId }: Props) {
         return;
       }
 
-      const analysis = await res.json();
-      setProject((prev) =>
-        prev ? { ...prev, ai_analysis: analysis } : prev
-      );
+      // Re-fetch full project — server updates client_name, type, location, social_urls
+      await fetchProject();
     } catch {
       setAnalyzeError("Something went wrong");
     } finally {
       setAnalyzing(false);
     }
-  }
+  }, [projectId, fetchProject]);
+
+  // Auto-trigger analysis when project has source_url but no ai_analysis
+  useEffect(() => {
+    if (
+      project &&
+      project.source_url &&
+      !project.ai_analysis &&
+      !analyzing &&
+      !autoTriggered.current
+    ) {
+      autoTriggered.current = true;
+      handleAnalyze();
+    }
+  }, [project, analyzing, handleAnalyze]);
 
   if (loading) {
     return (
@@ -78,6 +93,7 @@ export default function ProjectDetail({ projectId }: Props) {
 
   const intakeUrl = `${window.location.origin}/intake/${project.slug}`;
   const analysis = project.ai_analysis;
+  const isUrlFirstProject = !!project.source_url;
 
   function copyLink() {
     navigator.clipboard.writeText(intakeUrl);
@@ -123,7 +139,7 @@ export default function ProjectDetail({ projectId }: Props) {
       <NoirPanel className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-display text-lg">AI Analysis</h3>
-          {project.social_urls && project.social_urls.length > 0 && (
+          {(project.social_urls?.length > 0 || isUrlFirstProject) && (
             <BevelButton
               size="sm"
               onClick={handleAnalyze}
@@ -145,7 +161,9 @@ export default function ProjectDetail({ projectId }: Props) {
         {analyzing && (
           <div className="text-[var(--text-soft)] text-sm py-4 text-center">
             <div className="inline-block w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mr-2 align-middle" />
-            Fetching pages and analyzing with AI...
+            {isUrlFirstProject && !analysis
+              ? "Discovering business info and analyzing online presence..."
+              : "Fetching pages and analyzing with AI..."}
           </div>
         )}
 
@@ -295,7 +313,7 @@ export default function ProjectDetail({ projectId }: Props) {
                   )}
                 </div>
                 <p className="text-[var(--text-soft)] text-xs">
-                  Pipeline: {analysis._meta.models_used.map(m => m.split("-").slice(1, 3).join("-")).join(" \u2192 ")}
+                  Pipeline: {analysis._meta.models_used.map(m => m.split("-").slice(1, 3).join("-")).join(" → ")}
                 </p>
                 <p className="text-[var(--text-soft)] text-xs">
                   Intake form pre-filled with discovered info. Client can review and update.
@@ -307,8 +325,9 @@ export default function ProjectDetail({ projectId }: Props) {
 
         {!analysis && !analyzing && (
           <p className="text-[var(--text-soft)] text-sm">
-            Click &ldquo;Analyze Links&rdquo; to have AI scan the client&apos;s online presence
-            and pre-fill their intake form.
+            {isUrlFirstProject
+              ? "Analysis will start automatically..."
+              : "Click \u201cAnalyze Links\u201d to have AI scan the client\u2019s online presence and pre-fill their intake form."}
           </p>
         )}
       </NoirPanel>
