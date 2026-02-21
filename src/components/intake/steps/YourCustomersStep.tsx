@@ -2,6 +2,7 @@
 
 import TextArea from "@/components/ui/TextArea";
 import CheckboxGroup from "@/components/ui/CheckboxGroup";
+import AiSuggestion from "@/components/ui/AiSuggestion";
 import StepWrapper from "../StepWrapper";
 
 const DISCOVERY_OPTIONS = [
@@ -27,9 +28,13 @@ interface Props {
   onNext: () => void;
   onBack: () => void;
   isSaving: boolean;
+  aiPrefill?: {
+    ideal_customer?: string;
+    how_they_find_you?: string[];
+  };
 }
 
-export default function YourCustomersStep({ data, onChange, onNext, onBack, isSaving }: Props) {
+export default function YourCustomersStep({ data, onChange, onNext, onBack, isSaving, aiPrefill }: Props) {
   function update<K extends keyof YourCustomersData>(field: K, value: YourCustomersData[K]) {
     onChange({ ...data, [field]: value });
   }
@@ -44,9 +49,10 @@ export default function YourCustomersStep({ data, onChange, onNext, onBack, isSa
       isLast={false}
       isSaving={isSaving}
     >
-      <TextArea
+      <AiSuggestion
         label="Who's your ideal customer?"
-        value={data.ideal_customer || ""}
+        aiSuggestion={aiPrefill?.ideal_customer}
+        currentValue={data.ideal_customer || ""}
         onChange={(v) => update("ideal_customer", v)}
         placeholder="Homeowners? Commercial properties? New builds? Describe who you love working with."
         name="ideal_customer"

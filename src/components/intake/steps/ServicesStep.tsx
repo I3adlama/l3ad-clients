@@ -1,24 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import TextArea from "@/components/ui/TextArea";
-import TextInput from "@/components/ui/TextInput";
-import CheckboxGroup from "@/components/ui/CheckboxGroup";
+import { useState, useRef } from "react";
 import RadioGroup from "@/components/ui/RadioGroup";
+import AiSuggestion from "@/components/ui/AiSuggestion";
+import RadiusSlider from "@/components/ui/RadiusSlider";
 import StepWrapper from "../StepWrapper";
-
-const SERVICE_OPTIONS = [
-  { value: "Screen Enclosures", label: "Screen Enclosures" },
-  { value: "Rescreening", label: "Rescreening" },
-  { value: "Pool Enclosures", label: "Pool Enclosures" },
-  { value: "Patio Covers", label: "Patio Covers" },
-  { value: "Sunrooms", label: "Sunrooms" },
-  { value: "Pergolas", label: "Pergolas" },
-  { value: "Carports", label: "Carports" },
-  { value: "Gutters", label: "Gutters" },
-  { value: "Fence Installation", label: "Fence Installation" },
-  { value: "General Contracting", label: "General Contracting" },
-];
 
 interface ServicesData {
   main_services?: string[];
@@ -37,13 +23,48 @@ interface Props {
   onBack: () => void;
   isSaving: boolean;
   aiServices?: string[];
+  aiPrefill?: {
+    main_services?: string[];
+    specialty?: string;
+    service_area?: string;
+  };
+  location?: string;
 }
 
-export default function ServicesStep({ data, onChange, onNext, onBack, isSaving, aiServices }: Props) {
+export default function ServicesStep({
+  data,
+  onChange,
+  onNext,
+  onBack,
+  isSaving,
+  aiServices,
+  aiPrefill,
+  location,
+}: Props) {
   const [showPricing, setShowPricing] = useState(data.wants_pricing_research ?? false);
+  const [customService, setCustomService] = useState("");
+  const customInputRef = useRef<HTMLInputElement>(null);
+
+  // On first visit with AI services, initialize verified_services to all AI services
+  const hasAiServices = aiServices && aiServices.length > 0;
+  if (hasAiServices && !data.verified_services) {
+    // Initialize all AI services as checked
+    onChange({ ...data, verified_services: [...aiServices] });
+  }
 
   function update<K extends keyof ServicesData>(field: K, value: ServicesData[K]) {
     onChange({ ...data, [field]: value });
+  }
+
+  function addCustomService() {
+    const trimmed = customService.trim();
+    if (!trimmed) return;
+    const current = data.verified_services || [];
+    if (!current.includes(trimmed)) {
+      update("verified_services", [...current, trimmed]);
+    }
+    setCustomService("");
+    customInputRef.current?.focus();
   }
 
   return (
@@ -57,15 +78,12 @@ export default function ServicesStep({ data, onChange, onNext, onBack, isSaving,
       isSaving={isSaving}
     >
       {/* AI-discovered services verification */}
-      {aiServices && aiServices.length > 0 && (
+      {hasAiServices && (
         <div>
-          <span className="input-label">We found these services — are they right?</span>
-          <p className="text-[var(--text-soft)] text-xs mb-2">
-            Uncheck any that don&apos;t apply
-          </p>
+          <span className="input-label">We found these services — uncheck any that don&apos;t apply</span>
           <div className="space-y-2">
-            {aiServices.map((service) => {
-              const verified = data.verified_services || [];
+            {(data.verified_services || aiServices).map((service) => {
+              const verified = data.verified_services || aiServices;
               const isChecked = verified.includes(service);
               return (
                 <button
@@ -80,7 +98,7 @@ export default function ServicesStep({ data, onChange, onNext, onBack, isSaving,
                   className={`flex items-center gap-2 w-full text-left p-3 rounded-md border transition-colors ${
                     isChecked
                       ? "border-[var(--border-accent)] bg-accent/5 text-white"
-                      : "border-[var(--border)] bg-noir-800 text-[var(--text-soft)] line-through"
+                      : "border-[var(--border)] bg-noir-800 text-[var(--text-soft)]"
                   }`}
                 >
                   <span
@@ -101,38 +119,49 @@ export default function ServicesStep({ data, onChange, onNext, onBack, isSaving,
               );
             })}
           </div>
+
+          {/* Add custom service */}
+          <div className="flex gap-2 mt-3">
+            <input
+              ref={customInputRef}
+              type="text"
+              className="input-field flex-1"
+              value={customService}
+              onChange={(e) => setCustomService(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addCustomService();
+                }
+              }}
+              placeholder="Add another service..."
+            />
+            <button
+              type="button"
+              onClick={addCustomService}
+              className="px-4 py-2 rounded-md border border-[var(--border-accent)] bg-accent/10 text-accent text-sm hover:bg-accent/20 transition-colors shrink-0"
+            >
+              Add
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Additional services */}
-      <CheckboxGroup
-        label={aiServices?.length ? "Any other services you offer?" : "What services do you offer?"}
-        options={SERVICE_OPTIONS}
-        selected={data.additional_services || data.main_services || []}
-        onChange={(v) => {
-          if (aiServices?.length) {
-            update("additional_services", v);
-          } else {
-            update("main_services", v);
-          }
-        }}
-      />
-
-      <TextArea
+      <AiSuggestion
         label="What's your bread and butter — the thing you do the most?"
-        value={data.specialty || ""}
+        aiSuggestion={aiPrefill?.specialty}
+        currentValue={data.specialty || ""}
         onChange={(v) => update("specialty", v)}
         placeholder="The work you're best known for..."
         name="specialty"
         rows={3}
       />
 
-      <TextInput
+      <RadiusSlider
         label="What areas do you serve?"
-        value={data.service_area || ""}
+        value={data.service_area || "25 miles"}
         onChange={(v) => update("service_area", v)}
-        placeholder="e.g. Titusville, Cocoa, Melbourne — all of Brevard County"
-        name="service_area"
+        location={location}
       />
 
       {/* Pricing research opt-in */}

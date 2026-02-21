@@ -2,6 +2,7 @@
 
 import TextInput from "@/components/ui/TextInput";
 import TextArea from "@/components/ui/TextArea";
+import AiSuggestion from "@/components/ui/AiSuggestion";
 import StepWrapper from "../StepWrapper";
 
 interface YourStoryData {
@@ -16,9 +17,14 @@ interface Props {
   onChange: (data: YourStoryData) => void;
   onNext: () => void;
   isSaving: boolean;
+  aiPrefill?: {
+    how_started?: string;
+    years_in_business?: string;
+    differentiator?: string;
+  };
 }
 
-export default function YourStoryStep({ data, onChange, onNext, isSaving }: Props) {
+export default function YourStoryStep({ data, onChange, onNext, isSaving, aiPrefill }: Props) {
   function update(field: keyof YourStoryData, value: string) {
     onChange({ ...data, [field]: value });
   }
@@ -56,9 +62,10 @@ export default function YourStoryStep({ data, onChange, onNext, isSaving }: Prop
         name="proud_of"
       />
 
-      <TextArea
+      <AiSuggestion
         label="What makes you different from the other guys?"
-        value={data.differentiator || ""}
+        aiSuggestion={aiPrefill?.differentiator}
+        currentValue={data.differentiator || ""}
         onChange={(v) => update("differentiator", v)}
         placeholder="Why should someone pick you over the competition?"
         name="differentiator"

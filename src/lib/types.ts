@@ -95,6 +95,31 @@ export interface IntakeResponses {
   };
 }
 
+/** Client-safe mirror of PrefillData (agent.ts has `import "server-only"`) */
+export interface AiPrefill {
+  your_story?: {
+    how_started?: string;
+    years_in_business?: string;
+    differentiator?: string;
+  };
+  services?: {
+    main_services?: string[];
+    specialty?: string;
+    service_area?: string;
+  };
+  your_customers?: {
+    ideal_customer?: string;
+    how_they_find_you?: string[];
+  };
+  content_media?: {
+    has_existing_website?: boolean;
+    existing_website_url?: string;
+  };
+  goals?: {
+    competitor_url?: string;
+  };
+}
+
 export interface CreateProjectPayload {
   url: string;
   notes?: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { IntakeResponses } from "@/lib/types";
+import type { IntakeResponses, AiPrefill } from "@/lib/types";
 import { STEP_SECTIONS } from "@/lib/types";
 import AppShell from "@/components/layout/AppShell";
 import Header from "@/components/layout/Header";
@@ -22,6 +22,8 @@ interface IntakeWizardProps {
   initialResponses: IntakeResponses;
   initialStep: number;
   aiServices?: string[];
+  aiPrefill?: AiPrefill;
+  location?: string;
 }
 
 export default function IntakeWizard({
@@ -30,6 +32,8 @@ export default function IntakeWizard({
   initialResponses,
   initialStep,
   aiServices,
+  aiPrefill,
+  location,
 }: IntakeWizardProps) {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [responses, setResponses] = useState<IntakeResponses>(initialResponses);
@@ -156,6 +160,7 @@ export default function IntakeWizard({
                   onChange={(d) => updateSection("your_story", d)}
                   onNext={handleNext}
                   isSaving={isSaving}
+                  aiPrefill={aiPrefill?.your_story}
                 />
               )}
               {currentStep === 1 && (
@@ -166,6 +171,8 @@ export default function IntakeWizard({
                   onBack={handleBack}
                   isSaving={isSaving}
                   aiServices={aiServices}
+                  aiPrefill={aiPrefill?.services}
+                  location={location}
                 />
               )}
               {currentStep === 2 && (
@@ -175,6 +182,7 @@ export default function IntakeWizard({
                   onNext={handleNext}
                   onBack={handleBack}
                   isSaving={isSaving}
+                  aiPrefill={aiPrefill?.your_customers}
                 />
               )}
               {currentStep === 3 && (

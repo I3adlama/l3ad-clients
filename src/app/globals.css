@@ -283,6 +283,55 @@ a, button {
    SCROLLBAR
    ============================================================================ */
 
+/* ============================================================================
+   RANGE SLIDER (RadiusSlider)
+   ============================================================================ */
+
+.radius-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.radius-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 8px rgba(0, 240, 208, 0.4);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.radius-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 14px rgba(0, 240, 208, 0.6);
+}
+
+.radius-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 8px rgba(0, 240, 208, 0.4);
+  cursor: pointer;
+}
+
+.radius-slider::-moz-range-track {
+  height: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }

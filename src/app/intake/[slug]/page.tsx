@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import IntakeWizard from "@/components/intake/IntakeWizard";
+import type { AiPrefill } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -53,6 +54,12 @@ export default async function IntakePage({ params }: PageProps) {
   const rawServices = project.ai_analysis?.services;
   const aiServices: string[] = Array.isArray(rawServices) ? rawServices : [];
 
+  // Extract AI prefill data for form fields
+  const aiPrefill: AiPrefill | undefined = project.ai_analysis?.prefill || undefined;
+
+  // Extract location for the radius slider
+  const location: string | undefined = project.location || undefined;
+
   return (
     <IntakeWizard
       slug={slug}
@@ -60,6 +67,8 @@ export default async function IntakePage({ params }: PageProps) {
       initialResponses={project.responses || {}}
       initialStep={project.current_step || 0}
       aiServices={aiServices.length > 0 ? aiServices : undefined}
+      aiPrefill={aiPrefill}
+      location={location}
     />
   );
 }
