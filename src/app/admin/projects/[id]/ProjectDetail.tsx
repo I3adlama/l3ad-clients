@@ -95,8 +95,18 @@ export default function ProjectDetail({ projectId }: Props) {
   }
 
   const intakeUrl = `${window.location.origin}/intake/${project.slug}`;
-  const analysis = project.ai_analysis;
+  const rawAnalysis = project.ai_analysis;
   const isUrlFirstProject = !!project.source_url;
+
+  // Safely coerce array fields — AI sometimes returns strings instead of arrays
+  const analysis = rawAnalysis ? {
+    ...rawAnalysis,
+    services: Array.isArray(rawAnalysis.services) ? rawAnalysis.services : [],
+    strengths: Array.isArray(rawAnalysis.strengths) ? rawAnalysis.strengths : [],
+    branding_clues: Array.isArray(rawAnalysis.branding_clues) ? rawAnalysis.branding_clues : [],
+    review_highlights: Array.isArray(rawAnalysis.review_highlights) ? rawAnalysis.review_highlights : [],
+    suggested_questions: Array.isArray(rawAnalysis.suggested_questions) ? rawAnalysis.suggested_questions : [],
+  } : null;
 
   function copyLink() {
     navigator.clipboard.writeText(intakeUrl);
