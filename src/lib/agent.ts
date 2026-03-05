@@ -969,13 +969,18 @@ function applyProposalCorrections(
         newValue = c.fix;
       }
 
-      // Reject corrections that change the type (e.g., array → string)
-      // This prevents the review step from corrupting structured data
+      // Reject corrections that change the structural type
+      // The review step often replaces objects/arrays with instruction strings
       if (currentValue !== undefined && currentValue !== null) {
-        const currentIsArray = Array.isArray(currentValue);
-        const newIsArray = Array.isArray(newValue);
-        if (currentIsArray !== newIsArray) {
-          console.warn(`[proposal] Skipping correction at ${c.path}: would change type from ${currentIsArray ? "array" : typeof currentValue} to ${newIsArray ? "array" : typeof newValue}`);
+        const currentType = Array.isArray(currentValue) ? "array" : typeof currentValue;
+        const newType = Array.isArray(newValue) ? "array" : typeof newValue;
+        if (currentType !== newType) {
+          console.warn(`[proposal] Skipping correction at ${c.path}: type change ${currentType} → ${newType}`);
+          continue;
+        }
+        // Also reject replacing objects with strings (review step writes instructions as "fixes")
+        if (currentType === "object" && newType === "object" && typeof newValue === "string") {
+          console.warn(`[proposal] Skipping correction at ${c.path}: would replace object with string`);
           continue;
         }
       }
