@@ -14,6 +14,8 @@ const ProposalDataSchema = z.object({
     title: z.string(),
     description: z.string(),
   })),
+  pain_points_heading: z.string().optional(),
+  pain_points_subheading: z.string().optional(),
   why_new_website: z.object({
     before: z.array(z.object({ label: z.string(), description: z.string() })),
     after: z.array(z.object({ label: z.string(), description: z.string() })),
@@ -52,11 +54,16 @@ const ProposalDataSchema = z.object({
     monthly_revenue: z.string(),
     annual_revenue: z.string(),
     roi_percentage: z.string(),
+    cost_breakdown: z.array(z.object({ label: z.string(), amount: z.string() })).optional(),
+    revenue_model: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
     projections: z.array(z.object({
       month: z.string(),
+      orders: z.string().optional(),
+      clients: z.string().optional(),
       revenue: z.string(),
       cumulative: z.string(),
     })).optional(),
+    callout: z.string().optional(),
   }),
   timeline: z.object({
     phases: z.array(z.object({

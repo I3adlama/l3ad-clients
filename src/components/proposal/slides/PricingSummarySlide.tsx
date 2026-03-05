@@ -1,64 +1,112 @@
 import type { ProposalData } from "@/lib/types";
 
 export default function PricingSummarySlide({ data }: { data: ProposalData }) {
+  const packages = data.pricing_summary.packages;
+
   return (
     <section className="proposal-section">
       <div className="scroll-fade-up">
         <h1 className="section-heading">SIMPLE PRICING, NO SURPRISES</h1>
       </div>
 
-      {/* Price boxes */}
-      <div className="scroll-fade-up delay-1 grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-        {data.pricing_summary.packages.map((pkg, i) => (
-          <div key={i} className="price-box">
-            <div className="price-box__label">{pkg.label}</div>
-            {pkg.original_price && (
-              <div className="price-box__original">{pkg.original_price}</div>
+      {/* Pricing table */}
+      <div className="scroll-fade-up delay-1 mt-8 overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <th className="text-left font-ui text-xs tracking-widest text-[var(--text-soft)] uppercase pb-3 pr-4">
+                Package
+              </th>
+              {packages.map((pkg, i) => (
+                <th
+                  key={i}
+                  className={`text-center font-ui text-xs tracking-widest uppercase pb-3 px-4 ${
+                    pkg.highlighted
+                      ? "text-[var(--accent)]"
+                      : "text-[var(--text-soft)]"
+                  }`}
+                >
+                  {pkg.highlighted && (
+                    <span className="block text-[10px] text-[var(--accent)] mb-1 tracking-[0.2em]">
+                      RECOMMENDED
+                    </span>
+                  )}
+                  {pkg.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Standard price row */}
+            {packages.some((p) => p.original_price) && (
+              <tr className="border-t border-[var(--text-soft)]/10">
+                <td className="py-3 pr-4 text-sm text-[var(--text-muted)] font-body">
+                  Standard Rate
+                </td>
+                {packages.map((pkg, i) => (
+                  <td
+                    key={i}
+                    className="py-3 px-4 text-center text-sm text-[var(--text-soft)] line-through font-body"
+                  >
+                    {pkg.original_price || "-"}
+                  </td>
+                ))}
+              </tr>
             )}
-            <div className="price-box__price">{pkg.price}</div>
-            {pkg.frequency && (
-              <div className="price-box__freq">
-                {pkg.frequency === "one-time" ? "ONE-TIME" : "PER MONTH"}
-              </div>
-            )}
-            {pkg.savings && (
-              <div className="price-box__savings">{pkg.savings}</div>
-            )}
-          </div>
-        ))}
-      </div>
 
-      {/* Founder's Rate badge */}
-      <div className="scroll-fade-up delay-2 mt-5 text-center">
-        <span className="founders-badge">
-          FOUNDER&apos;S RATE — SAVE $840+/MO VS. STANDARD PRICING
-        </span>
-      </div>
+            {/* Your price row */}
+            <tr className="border-t border-[var(--text-soft)]/10">
+              <td className="py-3 pr-4 text-sm text-white font-body font-bold">
+                Your Price
+              </td>
+              {packages.map((pkg, i) => (
+                <td
+                  key={i}
+                  className={`py-3 px-4 text-center font-display text-lg ${
+                    pkg.highlighted ? "text-[var(--accent)]" : "text-white"
+                  }`}
+                >
+                  {pkg.price}
+                  {pkg.frequency && (
+                    <span className="text-xs text-[var(--text-muted)] font-body ml-1">
+                      {pkg.frequency === "one-time" ? "" : pkg.frequency}
+                    </span>
+                  )}
+                </td>
+              ))}
+            </tr>
 
-      {/* Optional add-on */}
-      <div className="scroll-fade-up delay-3 optional-addon">
-        <div>
-          <div className="optional-addon__label">OPTIONAL ADD-ON</div>
-          <p className="font-body text-sm text-[var(--text-muted)] mt-1">
-            Social Media Management — scheduled posting, content calendar, cross-platform strategy
-          </p>
-        </div>
-        <div className="optional-addon__pricing">
-          <span className="optional-addon__original">$397/mo</span>
-          <span className="optional-addon__price">$150/mo</span>
-          <span className="optional-addon__savings">SAVE $247/mo</span>
-        </div>
+            {/* Savings row */}
+            {packages.some((p) => p.savings) && (
+              <tr className="border-t border-[var(--text-soft)]/10">
+                <td className="py-3 pr-4 text-sm text-[var(--text-muted)] font-body">
+                  You Save
+                </td>
+                {packages.map((pkg, i) => (
+                  <td
+                    key={i}
+                    className="py-3 px-4 text-center text-sm text-[#10b981] font-bold font-body"
+                  >
+                    {pkg.savings || "-"}
+                  </td>
+                ))}
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Personal note */}
       {data.pricing_summary.personal_note && (
-        <div className="scroll-fade-up delay-4 personal-note">
+        <div className="scroll-fade-up delay-3 personal-note mt-8">
           {data.pricing_summary.personal_note.split("\n\n").map((paragraph, i) => (
             <p key={i} className="personal-note__text">
               {paragraph}
             </p>
           ))}
-          <p className="personal-note__author">— Nathaniel, L3ad Solutions LLC</p>
+          <p className="personal-note__author">
+            &mdash; Nathaniel, L3ad Solutions LLC
+          </p>
         </div>
       )}
     </section>

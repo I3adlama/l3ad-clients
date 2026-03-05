@@ -992,12 +992,26 @@ function applyProposalCorrections(
   return result;
 }
 
+const BRAND_VOICE_RULES = `
+WRITING VOICE (MANDATORY):
+- No em dashes. Use commas, periods, parentheses, or colons.
+- No AI words: leverage, actionable, seamless, comprehensive, dive into, delve, landscape, elevate, robust, streamline, game-changing, cutting-edge, unlock, empower, revolutionize, holistic, synergy, tailored, bespoke
+- No jargon clients wouldn't say out loud: lead generation, conversion-focused, omnichannel, KPIs
+- No exclamation points
+- No fake guarantees: guaranteed rankings, dominate Google, crush the competition
+- Write how a real person talks. Contractions preferred.
+- Direct, honest, peer-to-peer. Confident without being arrogant.
+- Short paragraphs. Lead with the point.
+- If a sentence sounds like a consultant wrote it, rewrite it.`;
+
 const PROPOSAL_JSON_SCHEMA = `{
   "title": {
     "client_name": "Business Name",
     "date": "Month Year",
-    "subtitle": "Tagline or proposal subtitle"
+    "subtitle": "Short tagline"
   },
+  "pain_points_heading": "Custom heading for pain points section",
+  "pain_points_subheading": "One sentence context line",
   "pain_points": [
     { "icon": "bi-icon-name", "title": "Pain Point Title", "description": "1-2 sentence description" }
   ],
@@ -1022,9 +1036,9 @@ const PROPOSAL_JSON_SCHEMA = `{
   },
   "competitors": {
     "entries": [
-      { "name": "Competitor Name", "website_score": "X/10", "seo_score": "X/10", "reviews": "X stars", "notes": "Weakness" }
+      { "name": "Competitor Name", "website_score": "X/10", "seo_score": "description", "reviews": "count or description", "notes": "What they do well or poorly" }
     ],
-    "unfair_advantage": "What L3ad Solutions will do differently"
+    "unfair_advantage": "Honest, specific explanation of what we will do differently (no buzzwords)"
   },
   "roi": {
     "monthly_cost": "$X,XXX",
@@ -1033,26 +1047,30 @@ const PROPOSAL_JSON_SCHEMA = `{
     "monthly_revenue": "$X,XXX",
     "annual_revenue": "$XX,XXX",
     "roi_percentage": "XXX%",
+    "cost_breakdown": [{ "label": "Service name", "amount": "$X/mo" }],
+    "revenue_model": [{ "label": "Metric description", "value": "number or amount" }],
     "projections": [
-      { "month": "Month X", "revenue": "$X,XXX", "cumulative": "$XX,XXX" }
-    ]
+      { "month": "Month X", "clients": "X", "revenue": "$X,XXX", "cumulative": "$XX,XXX" }
+    ],
+    "callout": "2-3 short lines explaining the payoff in plain language (separate with newlines)"
   },
   "timeline": {
     "phases": [
-      { "phase_number": 1, "title": "Phase Title", "duration": "X weeks", "tasks": ["task 1", "task 2"] }
+      { "phase_number": 1, "title": "Phase Title", "duration": "realistic duration", "tasks": ["task 1", "task 2"] }
     ]
   },
   "pricing_summary": {
     "packages": [
-      { "label": "Package Name", "original_price": "$X,XXX", "price": "$X,XXX", "frequency": "/mo", "savings": "Save $XX/mo", "highlighted": true }
+      { "label": "Option A: Name", "original_price": "$X,XXX", "price": "$X,XXX", "frequency": "/mo or one-time", "savings": "What they save", "highlighted": false },
+      { "label": "Option B: Name (Recommended)", "original_price": "$X,XXX", "price": "$X,XXX", "frequency": "/mo", "savings": "What they save", "highlighted": true }
     ],
-    "personal_note": "A personal closing note from L3ad Solutions"
+    "personal_note": "A genuine, personal closing note. No corporate speak. Written like a real person talking to the client."
   },
   "next_steps": {
     "steps": [
-      { "number": 1, "title": "Step Title", "description": "What to do" }
+      { "number": 1, "title": "Step Title", "description": "What to do, written conversationally" }
     ],
-    "cta_text": "Get Started Today",
+    "cta_text": "Contextual CTA (not generic 'Get Started Today')",
     "cta_url": "https://l3adsolutions.com"
   }
 }`;
@@ -1105,7 +1123,9 @@ Be specific to THIS client's industry and situation. Pick services that actually
 
   let proposalData: Record<string, unknown>;
   try {
-    const proposalText = await callModel(MODELS.balanced, 8000, `Generate a complete 10-slide business proposal for L3ad Solutions. Return ONLY a valid JSON object matching the exact schema below — no markdown, no comments, no explanation.
+    const proposalText = await callModel(MODELS.balanced, 8000, `Generate a complete 10-slide business proposal for L3ad Solutions. Return ONLY a valid JSON object matching the exact schema below. No markdown, no comments, no explanation.
+
+${BRAND_VOICE_RULES}
 
 STRATEGIC PLAN FROM SENIOR STRATEGIST:
 ${JSON.stringify(plan, null, 2)}
@@ -1115,23 +1135,24 @@ ${fullContext}
 
 ${L3AD_PRICING}
 
-REQUIRED JSON SCHEMA — follow this EXACTLY:
+REQUIRED JSON SCHEMA (follow EXACTLY):
 ${PROPOSAL_JSON_SCHEMA}
 
 RULES:
-1. title.date must be "${currentDate}"
-2. title.client_name must be "${clientName}"
-3. pain_points: exactly 6 items, icons must be valid Bootstrap Icons (bi-*), specific to this client's industry
-4. why_new_website: exactly 10 before items and 10 after items
-5. aida_strategy: exactly 4 sections (attention, interest, desire, action) with 3-5 items each
-6. itemized_pricing: use REAL L3ad Solutions prices from the catalog above. Pick services the strategist recommended. Group by category (e.g. "Website", "SEO & Visibility", "Social & Advertising"). Include subtotals per section.
-7. competitors: 3-4 realistic competitor entries for their local market. Website/SEO scores should reflect typical small business quality (5-7/10).
-8. roi: numbers MUST be internally consistent. monthly_revenue = revenue_per_customer × new_customers_per_month. annual_revenue = monthly_revenue × 12. roi_percentage = ((annual_revenue - monthly_cost × 12) / (monthly_cost × 12)) × 100. Include 6 monthly projections showing growth.
-9. timeline: 3-5 phases covering the full project from onboarding to ongoing optimization
-10. pricing_summary: 1-3 packages summarizing the itemized pricing. If a bundle applies, show original_price and savings. Mark the recommended package as highlighted.
-11. next_steps: 3-5 actionable steps. cta_url should be "https://l3adsolutions.com"
-12. All prices formatted as "$X,XXX" strings
-13. Be specific to THIS client — reference their industry, location, and actual business needs throughout`);
+1. title.date = "${currentDate}", title.client_name = "${clientName}"
+2. pain_points: exactly 6 items, Bootstrap Icons (bi-*), specific to this client's industry
+3. pain_points_heading: custom heading for this client (not generic)
+4. pain_points_subheading: one honest sentence about their situation
+5. why_new_website: exactly 10 before + 10 after items
+6. aida_strategy: 4 sections, 3-5 items each
+7. itemized_pricing: use prices from the admin's notes if custom pricing was specified. Otherwise use L3ad catalog prices. Group by category with subtotals.
+8. competitors: 3-4 REAL competitors in their local market. Research based on their location and industry. Include honest assessments.
+9. roi: use industry-specific revenue estimates. cost_breakdown lists each service cost. revenue_model explains the math. projections show 6 months. callout has 2-3 plain-language lines about payoff. Numbers must be internally consistent.
+10. timeline: L3ad builds sites in 1-2 days. Discovery is 1-3 days. GBP/citations take 24-48 hours (up to 3 weeks for propagation). SEO launch is 1-2 weeks. Total project: 1-2 weeks to go live, then ongoing monthly work.
+11. pricing_summary: 1-3 packages as a clean comparison. Use original_price for standard rate, price for what they pay, savings for the difference. Mark recommended option as highlighted.
+12. next_steps: 3-5 steps. cta_text should be contextual (not generic "Get Started Today"). cta_url = "https://l3adsolutions.com"
+13. personal_note: genuine, written like a real person. Reference the client's specific situation. No corporate speak.
+14. All prices as "$X,XXX" strings. Be specific to THIS client throughout.`);
     proposalData = parseJSON<Record<string, unknown>>(proposalText);
   } catch (e) {
     throw new Error(`Step 2 (Sonnet generate) failed: ${e instanceof Error ? e.message : e}`);

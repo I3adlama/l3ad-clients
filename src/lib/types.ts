@@ -183,6 +183,8 @@ export interface ProposalData {
     title: string;
     description: string;
   }[];
+  pain_points_heading?: string;
+  pain_points_subheading?: string;
 
   /** Slide 3: Why New Website */
   why_new_website: {
@@ -231,12 +233,16 @@ export interface ProposalData {
     monthly_revenue: string;
     annual_revenue: string;
     roi_percentage: string;
+    cost_breakdown?: { label: string; amount: string }[];
+    revenue_model?: { label: string; value: string }[];
     projections?: {
       month: string;
-      orders: string;
+      orders?: string;
+      clients?: string;
       revenue: string;
       cumulative: string;
     }[];
+    callout?: string;
   };
 
   /** Slide 8: Timeline */

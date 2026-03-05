@@ -54,6 +54,8 @@ function sanitizeProposalData(d: Record<string, unknown>): Record<string, unknow
   data.competitors.entries = ensureArr(data.competitors.entries);
 
   data.roi = ensureObj(data.roi, { monthly_cost: "$0", revenue_per_customer: "$0", new_customers_per_month: "0", monthly_revenue: "$0", annual_revenue: "$0", roi_percentage: "0%" });
+  if (data.roi.cost_breakdown) data.roi.cost_breakdown = ensureArr(data.roi.cost_breakdown);
+  if (data.roi.revenue_model) data.roi.revenue_model = ensureArr(data.roi.revenue_model);
   data.roi.projections = ensureArr(data.roi.projections);
 
   data.timeline = ensureObj(data.timeline, { phases: [] });
