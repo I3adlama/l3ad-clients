@@ -19,8 +19,17 @@ export default function ItemizedPricingSlide({ data }: { data: ProposalData }) {
           return (
             <div key={i} className={`scroll-fade-up delay-${Math.min(i + 1, 5)}`}>
               <div className={`pricing-bar ${isOptional ? "pricing-bar--orange" : style?.barClass || "pricing-bar--teal"}`}>
-                <span>{section.category}</span>
-                {section.subtotal && <span className="text-lg font-display">{section.subtotal}</span>}
+                <span>
+                  {section.category.includes("(") ? (
+                    <>
+                      {section.category.slice(0, section.category.indexOf("(")).trim()}
+                      <span className="pricing-bar__sub">
+                        {section.category.slice(section.category.indexOf("("))}
+                      </span>
+                    </>
+                  ) : section.category}
+                </span>
+                {section.subtotal && <span className="pricing-bar__total">{section.subtotal}</span>}
               </div>
 
               {section.items.map((item, j) => (
