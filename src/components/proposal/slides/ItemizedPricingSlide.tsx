@@ -29,8 +29,13 @@ export default function ItemizedPricingSlide({ data }: { data: ProposalData }) {
                     </>
                   ) : section.category}
                 </span>
-                {section.subtotal && <span className="pricing-bar__total">{section.subtotal}</span>}
+                {!isOptional && section.subtotal && <span className="pricing-bar__total">{section.subtotal}</span>}
               </div>
+              {isOptional && section.subtotal && (
+                <div className="pricing-item--optional-note">
+                  {section.subtotal}
+                </div>
+              )}
 
               {section.items.map((item, j) => (
                 <div
