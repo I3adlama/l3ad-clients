@@ -375,6 +375,8 @@
 .comp-card__metric {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
   padding: 0.3rem 0;
   font-family: var(--font-body);
   font-size: 0.95rem;
@@ -389,6 +391,8 @@
   color: var(--text);
   font-weight: 600;
   text-align: right;
+  max-width: 65%;
+  text-wrap: balance;
 }
 
 .comp-card--client .comp-card__metric-value {
