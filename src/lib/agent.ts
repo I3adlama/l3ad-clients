@@ -1116,10 +1116,10 @@ RULES:
     throw new Error(`Step 2 (Sonnet generate) failed: ${e instanceof Error ? e.message : e}`);
   }
 
-  // STEP 3: Opus — Review and approve
-  console.log("[proposal] Step 3: Opus reviewing proposal...");
+  // STEP 3: Sonnet — Quick review and corrections (Sonnet is faster than Opus here)
+  console.log("[proposal] Step 3: Sonnet reviewing proposal...");
   try {
-    const { text: reviewText } = await callManager(2000, `You are the senior strategist at L3ad Solutions doing final quality control on a generated proposal before it goes to the admin. Review it critically.
+    const reviewText = await callModel(MODELS.balanced, 1500, `You are the senior strategist at L3ad Solutions doing final quality control on a generated proposal before it goes to the admin. Review it critically.
 
 CLIENT: ${clientName}
 INDUSTRY: ${industry || "Unknown"}

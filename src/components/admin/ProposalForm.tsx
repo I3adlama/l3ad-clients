@@ -104,7 +104,7 @@ export default function ProposalForm({ projects }: { projects: ProjectOption[] }
             AI is crafting your proposal...
           </div>
           <div className="text-[var(--text-soft)] text-sm">
-            This takes 30-60 seconds ({elapsed}s elapsed)
+            This usually takes 1-3 minutes ({elapsed}s elapsed)
           </div>
         </div>
       )}

@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 import { generateProposal, type ProposalProjectContext } from "@/lib/agent";
 import { z } from "zod";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const GenerateSchema = z.object({
   notes: z.string().min(1, "Proposal notes are required"),
