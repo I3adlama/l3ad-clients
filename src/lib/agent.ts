@@ -893,6 +893,10 @@ BUNDLES:
 - Get Found: $450/mo (SEO Starter + GBP Starter) + $250 GBP setup — saves $50/mo
 - Get Growing: $1,200/mo (SEO Growth + GBP Growth + Social Starter) + $250 GBP setup — saves $150/mo
 
+CUSTOM INTEGRATIONS:
+- Booking/Calendar Integration: $150 one-time setup + $20/mo (appointment scheduling, calendar sync)
+- Payment Gateway Integration: $150 one-time setup + $20/mo (invoicing, payment processing)
+
 AUDITS:
 - SEO Audit: $49, GBP Audit: $39, GEO Audit: $99`;
 
@@ -1002,7 +1006,8 @@ WRITING VOICE (MANDATORY):
 - Write how a real person talks. Contractions preferred.
 - Direct, honest, peer-to-peer. Confident without being arrogant.
 - Short paragraphs. Lead with the point.
-- If a sentence sounds like a consultant wrote it, rewrite it.`;
+- If a sentence sounds like a consultant wrote it, rewrite it.
+- FIRST PERSON SINGULAR ONLY: L3ad Solutions is a solo founder. Use "I", "I'm", "my", "me" instead of "we", "we're", "our", "us". Never use plural pronouns when referring to L3ad Solutions.`;
 
 const PROPOSAL_JSON_SCHEMA = `{
   "title": {
@@ -1038,7 +1043,7 @@ const PROPOSAL_JSON_SCHEMA = `{
     "entries": [
       { "name": "Competitor Name", "website_score": "X/10", "seo_score": "description", "reviews": "count or description", "notes": "What they do well or poorly" }
     ],
-    "unfair_advantage": "Honest, specific explanation of what we will do differently (no buzzwords)"
+    "unfair_advantage": "Honest, specific explanation of what I will do differently (no buzzwords, first person singular)"
   },
   "roi": {
     "monthly_cost": "$X,XXX",
@@ -1091,7 +1096,7 @@ export async function generateProposal(
 
   let plan: ProposalPlan;
   try {
-    const { text: planText } = await callManager(1500, `You are the senior strategist at L3ad Solutions, a web design and digital marketing agency. You are planning a proposal for a potential client.
+    const { text: planText } = await callManager(1500, `You are the strategist at L3ad Solutions, a solo-founder web design and digital marketing agency. You are planning a proposal for a potential client. L3ad Solutions is run by one person (Nathaniel), so always use first person singular (I/my/me, never we/our/us).
 
 CLIENT CONTEXT:
 ${projectSummary}
@@ -1103,7 +1108,7 @@ ${L3AD_PRICING}
 
 Based on the client context and admin notes, create a strategic proposal plan. Return ONLY a JSON object:
 {
-  "positioning": "2-3 sentences on how to position L3ad Solutions as the ideal partner for this client",
+  "positioning": "2-3 sentences on how to position L3ad Solutions as the ideal partner for this client (use I/my, not we/our)",
   "pain_points": ["6 specific pain points this client likely faces — be industry-specific"],
   "recommended_services": ["list the specific L3ad Solutions services/bundles to recommend based on their needs"],
   "pricing_strategy": "which tier (Starter/Growth) and why, any bundles that make sense, total monthly estimate",
@@ -1152,7 +1157,8 @@ RULES:
 11. pricing_summary: 1-3 packages as a clean comparison. Use original_price for standard rate, price for what they pay, savings for the difference. Mark recommended option as highlighted.
 12. next_steps: 3-5 steps. cta_text should be contextual (not generic "Get Started Today"). cta_url = "https://l3adsolutions.com"
 13. personal_note: genuine, written like a real person. Reference the client's specific situation. No corporate speak.
-14. All prices as "$X,XXX" strings. Be specific to THIS client throughout.`);
+14. All prices as "$X,XXX" strings. Be specific to THIS client throughout.
+15. FIRST PERSON SINGULAR: L3ad Solutions is a solo founder (Nathaniel). All copy must use "I", "I'm", "my", "me". Never use "we", "we're", "our", "us" when referring to L3ad Solutions.`);
     proposalData = parseJSON<Record<string, unknown>>(proposalText);
   } catch (e) {
     throw new Error(`Step 2 (Sonnet generate) failed: ${e instanceof Error ? e.message : e}`);
