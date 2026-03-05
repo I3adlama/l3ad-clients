@@ -42,10 +42,15 @@ export async function POST(req: NextRequest) {
       }
 
       const intakeRows = await sql`
-        SELECT section_key, responses
+        SELECT responses
         FROM intake_responses
         WHERE project_id = ${data.project_id}
       `;
+
+      // intake_responses has a single row per project with all responses in one JSONB blob
+      const intakeData = intakeRows.length > 0
+        ? (intakeRows[0].responses as Record<string, Record<string, unknown>>)
+        : {};
 
       project = {
         id: row.id as string,
@@ -54,9 +59,9 @@ export async function POST(req: NextRequest) {
         location: row.location as string | null,
         social_urls: row.social_urls as { platform: string; url: string }[] | null,
         ai_analysis: row.ai_analysis as Record<string, unknown> | null,
-        intake_responses: intakeRows.map((r) => ({
-          section_key: r.section_key as string,
-          responses: r.responses as Record<string, unknown>,
+        intake_responses: Object.entries(intakeData).map(([section_key, responses]) => ({
+          section_key,
+          responses: (responses && typeof responses === "object") ? responses as Record<string, unknown> : {},
         })),
       };
     }
