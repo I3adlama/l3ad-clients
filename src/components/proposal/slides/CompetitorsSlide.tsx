@@ -60,9 +60,11 @@ export default function CompetitorsSlide({ data }: { data: ProposalData }) {
       {/* Unfair advantage callout */}
       <div className="scroll-fade-up delay-4 advantage-callout mt-8">
         <div className="advantage-callout__title">YOUR UNFAIR ADVANTAGE</div>
-        <p className="font-body text-base text-[var(--text-muted)] leading-relaxed">
-          {data.competitors.unfair_advantage}
-        </p>
+        <div className="font-body text-base text-[var(--text-muted)] leading-relaxed space-y-3">
+          {data.competitors.unfair_advantage.split("\n\n").map((paragraph, i) => (
+            <p key={i}>{paragraph}</p>
+          ))}
+        </div>
       </div>
     </section>
   );
