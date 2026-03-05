@@ -87,9 +87,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    console.error("Proposal generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Proposal generation error:", message, error);
     return NextResponse.json(
-      { error: "Failed to generate proposal" },
+      { error: `Failed to generate proposal: ${message}` },
       { status: 500 }
     );
   }

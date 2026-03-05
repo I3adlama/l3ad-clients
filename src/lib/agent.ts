@@ -1047,9 +1047,12 @@ export async function generateProposal(
   const currentDate = now.toLocaleString("en-US", { month: "long", year: "numeric" });
 
   // STEP 1: Opus — Strategic planning
+  console.log("[proposal] Step 1: Opus strategic planning...");
   const projectSummary = project ? buildProjectSummary(project) : "No linked project — using admin notes only.";
 
-  const { text: planText } = await callManager(1500, `You are the senior strategist at L3ad Solutions, a web design and digital marketing agency. You are planning a proposal for a potential client.
+  let plan: ProposalPlan;
+  try {
+    const { text: planText } = await callManager(1500, `You are the senior strategist at L3ad Solutions, a web design and digital marketing agency. You are planning a proposal for a potential client.
 
 CLIENT CONTEXT:
 ${projectSummary}
@@ -1070,13 +1073,18 @@ Based on the client context and admin notes, create a strategic proposal plan. R
 }
 
 Be specific to THIS client's industry and situation. Pick services that actually match their needs — don't recommend everything.`);
-
-  const plan = parseJSON<ProposalPlan>(planText);
+    plan = parseJSON<ProposalPlan>(planText);
+  } catch (e) {
+    throw new Error(`Step 1 (Opus plan) failed: ${e instanceof Error ? e.message : e}`);
+  }
 
   // STEP 2: Sonnet — Generate full proposal JSON
+  console.log("[proposal] Step 2: Sonnet generating proposal JSON...");
   const fullContext = buildFullContext(project, notes);
 
-  const proposalText = await callModel(MODELS.balanced, 8000, `Generate a complete 10-slide business proposal for L3ad Solutions. Return ONLY a valid JSON object matching the exact schema below — no markdown, no comments.
+  let proposalData: Record<string, unknown>;
+  try {
+    const proposalText = await callModel(MODELS.balanced, 8000, `Generate a complete 10-slide business proposal for L3ad Solutions. Return ONLY a valid JSON object matching the exact schema below — no markdown, no comments, no explanation.
 
 STRATEGIC PLAN FROM SENIOR STRATEGIST:
 ${JSON.stringify(plan, null, 2)}
@@ -1103,11 +1111,15 @@ RULES:
 11. next_steps: 3-5 actionable steps. cta_url should be "https://l3adsolutions.com"
 12. All prices formatted as "$X,XXX" strings
 13. Be specific to THIS client — reference their industry, location, and actual business needs throughout`);
-
-  let proposalData = parseJSON<Record<string, unknown>>(proposalText);
+    proposalData = parseJSON<Record<string, unknown>>(proposalText);
+  } catch (e) {
+    throw new Error(`Step 2 (Sonnet generate) failed: ${e instanceof Error ? e.message : e}`);
+  }
 
   // STEP 3: Opus — Review and approve
-  const { text: reviewText } = await callManager(2000, `You are the senior strategist at L3ad Solutions doing final quality control on a generated proposal before it goes to the admin. Review it critically.
+  console.log("[proposal] Step 3: Opus reviewing proposal...");
+  try {
+    const { text: reviewText } = await callManager(2000, `You are the senior strategist at L3ad Solutions doing final quality control on a generated proposal before it goes to the admin. Review it critically.
 
 CLIENT: ${clientName}
 INDUSTRY: ${industry || "Unknown"}
@@ -1138,11 +1150,15 @@ CHECK THESE SPECIFICALLY:
 
 If prices don't match the catalog, correct them. If ROI math is wrong, fix the numbers. Be strict about accuracy.`);
 
-  const review = parseJSON<ProposalCorrections>(reviewText);
-
-  if (review.corrections.length > 0) {
-    proposalData = applyProposalCorrections(proposalData, review);
+    const review = parseJSON<ProposalCorrections>(reviewText);
+    if (review.corrections.length > 0) {
+      proposalData = applyProposalCorrections(proposalData, review);
+    }
+  } catch (e) {
+    // Step 3 failure is non-fatal — use unreviewed proposal
+    console.warn(`[proposal] Step 3 (Opus review) failed, using unreviewed draft: ${e instanceof Error ? e.message : e}`);
   }
 
+  console.log("[proposal] Pipeline complete.");
   return { proposalData, clientName, industry };
 }
