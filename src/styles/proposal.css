@@ -382,11 +382,13 @@
 
 .comp-card__metric-label {
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .comp-card__metric-value {
   color: var(--text);
   font-weight: 600;
+  text-align: right;
 }
 
 .comp-card--client .comp-card__metric-value {
