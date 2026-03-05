@@ -54,9 +54,14 @@ export default function ProposalsList() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-display">Proposals</h1>
-        <BevelButton href="/admin" variant="secondary" size="sm">
-          &larr; Dashboard
-        </BevelButton>
+        <div className="flex items-center gap-2">
+          <BevelButton href="/admin/proposals/new" size="sm">
+            + New Proposal
+          </BevelButton>
+          <BevelButton href="/admin" variant="secondary" size="sm">
+            &larr; Dashboard
+          </BevelButton>
+        </div>
       </div>
 
       {loading ? (
@@ -66,8 +71,11 @@ export default function ProposalsList() {
       ) : proposals.length === 0 ? (
         <div className="noir-panel p-12 text-center">
           <p className="text-[var(--text-soft)] mb-4">
-            No proposals yet. Create one via the API.
+            No proposals yet.
           </p>
+          <BevelButton href="/admin/proposals/new" size="sm">
+            Create Your First Proposal
+          </BevelButton>
         </div>
       ) : (
         <div className="space-y-3">

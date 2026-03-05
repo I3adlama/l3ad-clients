@@ -850,3 +850,299 @@ export async function analyzeFromUrl(
 
   return analysis;
 }
+
+// ============================================================================
+// PROPOSAL GENERATION PIPELINE
+// ============================================================================
+
+export interface ProposalProjectContext {
+  id: string;
+  client_name: string;
+  business_type: string | null;
+  location: string | null;
+  social_urls: { platform: string; url: string }[] | null;
+  ai_analysis: Record<string, unknown> | null;
+  intake_responses: { section_key: string; responses: Record<string, unknown> }[];
+}
+
+interface ProposalPlan {
+  positioning: string;
+  pain_points: string[];
+  recommended_services: string[];
+  pricing_strategy: string;
+  competitive_angle: string;
+  roi_narrative: string;
+}
+
+interface ProposalCorrections {
+  approved: boolean;
+  corrections: { path: string; issue: string; fix: string }[];
+  notes: string;
+}
+
+const L3AD_PRICING = `SERVICES & PRICING (use these real prices):
+- SEO: Starter $350/mo, Growth $700/mo
+- Web Design: Starter $1,500, Business $3,000 (one-time)
+- Digital Advertising: Starter $400/mo + ad spend, Growth $750/mo + ad spend
+- Google Business Profile: Setup $250 one-time, Starter $150/mo, Growth $300/mo
+- Social Media: Starter $350/mo (2 platforms), Growth $650/mo (3 platforms)
+- AI Automation: Starter $350 setup + $75/mo, Growth $750 setup + $150/mo
+- AI Search (GEO): Starter $350/mo, Growth $650/mo
+
+BUNDLES:
+- Get Found: $450/mo (SEO Starter + GBP Starter) + $250 GBP setup — saves $50/mo
+- Get Growing: $1,200/mo (SEO Growth + GBP Growth + Social Starter) + $250 GBP setup — saves $150/mo
+
+AUDITS:
+- SEO Audit: $49, GBP Audit: $39, GEO Audit: $99`;
+
+function buildProjectSummary(project: ProposalProjectContext): string {
+  const parts: string[] = [];
+  parts.push(`Client: ${project.client_name}`);
+  if (project.business_type) parts.push(`Type: ${project.business_type}`);
+  if (project.location) parts.push(`Location: ${project.location}`);
+
+  if (project.ai_analysis) {
+    const ai = project.ai_analysis;
+    if (ai.description) parts.push(`Description: ${String(ai.description).slice(0, 300)}`);
+    if (ai.services) parts.push(`Services: ${JSON.stringify(ai.services).slice(0, 300)}`);
+    if (ai.strengths) parts.push(`Strengths: ${JSON.stringify(ai.strengths).slice(0, 300)}`);
+    if (ai.tone) parts.push(`Tone: ${String(ai.tone)}`);
+  }
+
+  return parts.join("\n").slice(0, 2000);
+}
+
+function buildFullContext(project: ProposalProjectContext | null, notes: string): string {
+  const parts: string[] = [];
+  parts.push(`ADMIN NOTES:\n${notes}`);
+
+  if (!project) return parts.join("\n\n");
+
+  parts.push(`CLIENT: ${project.client_name}`);
+  if (project.business_type) parts.push(`BUSINESS TYPE: ${project.business_type}`);
+  if (project.location) parts.push(`LOCATION: ${project.location}`);
+
+  if (project.social_urls && project.social_urls.length > 0) {
+    parts.push(`SOCIAL URLS:\n${project.social_urls.map(s => `- ${s.platform}: ${s.url}`).join("\n")}`);
+  }
+
+  if (project.ai_analysis) {
+    parts.push(`AI ANALYSIS:\n${JSON.stringify(project.ai_analysis, null, 2).slice(0, 4000)}`);
+  }
+
+  if (project.intake_responses.length > 0) {
+    const intakeText = project.intake_responses
+      .map(r => `[${r.section_key}]: ${JSON.stringify(r.responses)}`)
+      .join("\n");
+    parts.push(`INTAKE RESPONSES:\n${intakeText.slice(0, 3000)}`);
+  }
+
+  return parts.join("\n\n");
+}
+
+function applyProposalCorrections(
+  data: Record<string, unknown>,
+  corrections: ProposalCorrections
+): Record<string, unknown> {
+  const result = JSON.parse(JSON.stringify(data));
+
+  for (const c of corrections.corrections) {
+    const keys = c.path.split(".");
+    let obj = result;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (obj && typeof obj === "object" && keys[i] in obj) {
+        obj = (obj as Record<string, unknown>)[keys[i]] as Record<string, unknown>;
+      } else {
+        obj = null as unknown as Record<string, unknown>;
+        break;
+      }
+    }
+    if (obj && typeof obj === "object") {
+      const lastKey = keys[keys.length - 1];
+      try {
+        (obj as Record<string, unknown>)[lastKey] = JSON.parse(c.fix);
+      } catch {
+        (obj as Record<string, unknown>)[lastKey] = c.fix;
+      }
+    }
+  }
+
+  return result;
+}
+
+const PROPOSAL_JSON_SCHEMA = `{
+  "title": {
+    "client_name": "Business Name",
+    "date": "Month Year",
+    "subtitle": "Tagline or proposal subtitle"
+  },
+  "pain_points": [
+    { "icon": "bi-icon-name", "title": "Pain Point Title", "description": "1-2 sentence description" }
+  ],
+  "why_new_website": {
+    "before": [{ "label": "Short Label", "description": "What they deal with now" }],
+    "after": [{ "label": "Short Label", "description": "How it improves" }]
+  },
+  "aida_strategy": {
+    "attention": { "title": "Section Title", "items": ["strategy item 1", "strategy item 2"] },
+    "interest": { "title": "Section Title", "items": ["item 1", "item 2"] },
+    "desire": { "title": "Section Title", "items": ["item 1", "item 2"] },
+    "action": { "title": "Section Title", "items": ["item 1", "item 2"] }
+  },
+  "itemized_pricing": {
+    "sections": [
+      {
+        "category": "Category Name",
+        "items": [{ "name": "Service Name", "description": "What it includes", "price": "$X,XXX" }],
+        "subtotal": "$X,XXX"
+      }
+    ]
+  },
+  "competitors": {
+    "entries": [
+      { "name": "Competitor Name", "website_score": "X/10", "seo_score": "X/10", "reviews": "X stars", "notes": "Weakness" }
+    ],
+    "unfair_advantage": "What L3ad Solutions will do differently"
+  },
+  "roi": {
+    "monthly_cost": "$X,XXX",
+    "revenue_per_customer": "$X,XXX",
+    "new_customers_per_month": "X",
+    "monthly_revenue": "$X,XXX",
+    "annual_revenue": "$XX,XXX",
+    "roi_percentage": "XXX%",
+    "projections": [
+      { "month": "Month X", "revenue": "$X,XXX", "cumulative": "$XX,XXX" }
+    ]
+  },
+  "timeline": {
+    "phases": [
+      { "phase_number": 1, "title": "Phase Title", "duration": "X weeks", "tasks": ["task 1", "task 2"] }
+    ]
+  },
+  "pricing_summary": {
+    "packages": [
+      { "label": "Package Name", "original_price": "$X,XXX", "price": "$X,XXX", "frequency": "/mo", "savings": "Save $XX/mo", "highlighted": true }
+    ],
+    "personal_note": "A personal closing note from L3ad Solutions"
+  },
+  "next_steps": {
+    "steps": [
+      { "number": 1, "title": "Step Title", "description": "What to do" }
+    ],
+    "cta_text": "Get Started Today",
+    "cta_url": "https://l3adsolutions.com"
+  }
+}`;
+
+export async function generateProposal(
+  notes: string,
+  project: ProposalProjectContext | null
+): Promise<{ proposalData: Record<string, unknown>; clientName: string; industry: string | null }> {
+  const clientName = project?.client_name || "Prospective Client";
+  const industry = project?.business_type || null;
+
+  const now = new Date();
+  const currentDate = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+  // STEP 1: Opus — Strategic planning
+  const projectSummary = project ? buildProjectSummary(project) : "No linked project — using admin notes only.";
+
+  const { text: planText } = await callManager(1500, `You are the senior strategist at L3ad Solutions, a web design and digital marketing agency. You are planning a proposal for a potential client.
+
+CLIENT CONTEXT:
+${projectSummary}
+
+ADMIN'S PROPOSAL NOTES:
+${notes}
+
+${L3AD_PRICING}
+
+Based on the client context and admin notes, create a strategic proposal plan. Return ONLY a JSON object:
+{
+  "positioning": "2-3 sentences on how to position L3ad Solutions as the ideal partner for this client",
+  "pain_points": ["6 specific pain points this client likely faces — be industry-specific"],
+  "recommended_services": ["list the specific L3ad Solutions services/bundles to recommend based on their needs"],
+  "pricing_strategy": "which tier (Starter/Growth) and why, any bundles that make sense, total monthly estimate",
+  "competitive_angle": "how to differentiate from competitors in their market",
+  "roi_narrative": "realistic ROI story — what revenue increase can they expect and why"
+}
+
+Be specific to THIS client's industry and situation. Pick services that actually match their needs — don't recommend everything.`);
+
+  const plan = parseJSON<ProposalPlan>(planText);
+
+  // STEP 2: Sonnet — Generate full proposal JSON
+  const fullContext = buildFullContext(project, notes);
+
+  const proposalText = await callModel(MODELS.balanced, 8000, `Generate a complete 10-slide business proposal for L3ad Solutions. Return ONLY a valid JSON object matching the exact schema below — no markdown, no comments.
+
+STRATEGIC PLAN FROM SENIOR STRATEGIST:
+${JSON.stringify(plan, null, 2)}
+
+FULL CLIENT CONTEXT:
+${fullContext}
+
+${L3AD_PRICING}
+
+REQUIRED JSON SCHEMA — follow this EXACTLY:
+${PROPOSAL_JSON_SCHEMA}
+
+RULES:
+1. title.date must be "${currentDate}"
+2. title.client_name must be "${clientName}"
+3. pain_points: exactly 6 items, icons must be valid Bootstrap Icons (bi-*), specific to this client's industry
+4. why_new_website: exactly 10 before items and 10 after items
+5. aida_strategy: exactly 4 sections (attention, interest, desire, action) with 3-5 items each
+6. itemized_pricing: use REAL L3ad Solutions prices from the catalog above. Pick services the strategist recommended. Group by category (e.g. "Website", "SEO & Visibility", "Social & Advertising"). Include subtotals per section.
+7. competitors: 3-4 realistic competitor entries for their local market. Website/SEO scores should reflect typical small business quality (5-7/10).
+8. roi: numbers MUST be internally consistent. monthly_revenue = revenue_per_customer × new_customers_per_month. annual_revenue = monthly_revenue × 12. roi_percentage = ((annual_revenue - monthly_cost × 12) / (monthly_cost × 12)) × 100. Include 6 monthly projections showing growth.
+9. timeline: 3-5 phases covering the full project from onboarding to ongoing optimization
+10. pricing_summary: 1-3 packages summarizing the itemized pricing. If a bundle applies, show original_price and savings. Mark the recommended package as highlighted.
+11. next_steps: 3-5 actionable steps. cta_url should be "https://l3adsolutions.com"
+12. All prices formatted as "$X,XXX" strings
+13. Be specific to THIS client — reference their industry, location, and actual business needs throughout`);
+
+  let proposalData = parseJSON<Record<string, unknown>>(proposalText);
+
+  // STEP 3: Opus — Review and approve
+  const { text: reviewText } = await callManager(2000, `You are the senior strategist at L3ad Solutions doing final quality control on a generated proposal before it goes to the admin. Review it critically.
+
+CLIENT: ${clientName}
+INDUSTRY: ${industry || "Unknown"}
+DATE: ${currentDate}
+
+PROPOSAL:
+${JSON.stringify(proposalData, null, 2).slice(0, 6000)}
+
+REAL PRICING CATALOG:
+${L3AD_PRICING}
+
+Review and return ONLY a JSON object:
+{
+  "approved": true/false,
+  "corrections": [
+    { "path": "dot.notation.path", "issue": "what's wrong", "fix": "corrected value (as JSON-parseable string if object/array, or plain string)" }
+  ],
+  "notes": "Brief review notes"
+}
+
+CHECK THESE SPECIFICALLY:
+1. Are all prices real L3ad Solutions prices from the catalog? Fix any made-up prices.
+2. Is the ROI math internally consistent? (monthly_revenue = revenue_per_customer × new_customers_per_month, etc.)
+3. Are pain points specific to the client's industry (not generic)?
+4. Does the timeline make sense for the recommended services?
+5. Are competitor entries realistic (not obviously fabricated)?
+6. Is title.date "${currentDate}" and title.client_name "${clientName}"?
+
+If prices don't match the catalog, correct them. If ROI math is wrong, fix the numbers. Be strict about accuracy.`);
+
+  const review = parseJSON<ProposalCorrections>(reviewText);
+
+  if (review.corrections.length > 0) {
+    proposalData = applyProposalCorrections(proposalData, review);
+  }
+
+  return { proposalData, clientName, industry };
+}
