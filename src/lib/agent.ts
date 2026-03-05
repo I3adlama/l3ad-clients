@@ -960,11 +960,27 @@ function applyProposalCorrections(
     }
     if (obj && typeof obj === "object") {
       const lastKey = keys[keys.length - 1];
+      const currentValue = (obj as Record<string, unknown>)[lastKey];
+
+      let newValue: unknown;
       try {
-        (obj as Record<string, unknown>)[lastKey] = JSON.parse(c.fix);
+        newValue = JSON.parse(c.fix);
       } catch {
-        (obj as Record<string, unknown>)[lastKey] = c.fix;
+        newValue = c.fix;
       }
+
+      // Reject corrections that change the type (e.g., array → string)
+      // This prevents the review step from corrupting structured data
+      if (currentValue !== undefined && currentValue !== null) {
+        const currentIsArray = Array.isArray(currentValue);
+        const newIsArray = Array.isArray(newValue);
+        if (currentIsArray !== newIsArray) {
+          console.warn(`[proposal] Skipping correction at ${c.path}: would change type from ${currentIsArray ? "array" : typeof currentValue} to ${newIsArray ? "array" : typeof newValue}`);
+          continue;
+        }
+      }
+
+      (obj as Record<string, unknown>)[lastKey] = newValue;
     }
   }
 
