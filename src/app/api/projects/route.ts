@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifySession } from "@/lib/auth";
 import { z } from "zod";
-import { nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
+
+const slugId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 4);
 
 const CreateProjectSchema = z.object({
   url: z.string().min(1, "URL is required"),
@@ -14,7 +16,7 @@ function slugify(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  return `${base}-${nanoid(4).toLowerCase()}`;
+  return `${base}-${slugId()}`;
 }
 
 /** Normalize a URL: prepend https:// if missing, validate it parses */

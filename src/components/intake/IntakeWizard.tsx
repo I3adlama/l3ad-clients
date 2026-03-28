@@ -40,6 +40,7 @@ export default function IntakeWizard({
   const [isSaving, setIsSaving] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Track which sections have been modified for debounced auto-save
   const dirtyRef = useRef<Set<number>>(new Set());
@@ -56,7 +57,7 @@ export default function IntakeWizard({
   const saveSection = useCallback(
     async (step: number, completed = false) => {
       const sectionKey = STEP_SECTIONS[step];
-      await fetch(`/api/intake/${slug}`, {
+      const res = await fetch(`/api/intake/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -66,6 +67,9 @@ export default function IntakeWizard({
           completed,
         }),
       });
+      if (!res.ok) {
+        throw new Error(`Save failed for ${sectionKey} (${res.status})`);
+      }
     },
     [slug, responses]
   );
@@ -114,13 +118,14 @@ export default function IntakeWizard({
 
     setIsSaving(true);
     setSaveStatus("saving");
+    setSubmitError(null);
     try {
       // Save all sections, last one with completed: true
       await Promise.all(
         STEP_SECTIONS.map((_, i) => saveSection(i, i === totalSteps - 1))
       );
 
-      // Notify admin via Web3Forms
+      // Notify admin via Web3Forms (only after successful save)
       fetch("https://api.web3forms.com/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,6 +140,7 @@ export default function IntakeWizard({
       window.location.href = `/intake/${slug}/thank-you`;
     } catch (err) {
       console.error("Submit failed:", err);
+      setSubmitError("Something went wrong saving your responses. Please try again.");
       setSaveStatus("idle");
       setIsSaving(false);
     }
@@ -320,6 +326,9 @@ export default function IntakeWizard({
             <BevelButton onClick={handleSubmit} disabled={isSaving} size="lg">
               {isSaving ? "Submitting..." : "Submit"}
             </BevelButton>
+            {submitError && (
+              <p className="text-red-400 text-sm text-center mt-2">{submitError}</p>
+            )}
           </div>
 
           <p className="text-center text-[var(--text-soft)] text-xs mt-6">

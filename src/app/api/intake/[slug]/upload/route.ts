@@ -14,7 +14,7 @@ const ALLOWED_TYPES = [
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
-const slugPattern = /^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]$/;
+const slugPattern = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,118}[a-zA-Z0-9]$/;
 
 export async function POST(
   req: NextRequest,
@@ -53,10 +53,19 @@ export async function POST(
     );
   }
 
-  const blob = await put(`intake/${slug}/${file.name}`, file, {
-    access: "public",
-    addRandomSuffix: true,
-  });
+  let blob;
+  try {
+    blob = await put(`intake/${slug}/${file.name}`, file, {
+      access: "public",
+      addRandomSuffix: true,
+    });
+  } catch (err) {
+    console.error("Vercel Blob upload failed:", err);
+    return NextResponse.json(
+      { error: "File storage is unavailable. Please try again later." },
+      { status: 503 }
+    );
+  }
 
   return NextResponse.json({
     url: blob.url,
