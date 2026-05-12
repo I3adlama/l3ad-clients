@@ -9,7 +9,7 @@ export default function TitleSlide({ data }: { data: ProposalData }) {
 
       <div className="scroll-fade-up flex justify-center animate-float">
         <Image
-          src="/logo-large.png"
+          src="/logowhite.png"
           alt="L3ad Solutions"
           width={400}
           height={92}

@@ -10,7 +10,7 @@ export default function Header() {
           rel="noopener noreferrer"
         >
           <Image
-            src="/logo-header.png"
+            src="/logowhite.png"
             alt="L3ad Solutions"
             width={180}
             height={40}

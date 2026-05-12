@@ -13,7 +13,7 @@ export default function AdminLayout({
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/admin" className="no-underline">
             <Image
-              src="/logo-header.png"
+              src="/logowhite.png"
               alt="L3ad Solutions"
               width={140}
               height={32}

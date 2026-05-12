@@ -46,7 +46,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <Image
-              src="/logo-large.png"
+              src="/logowhite.png"
               alt="L3ad Solutions"
               width={220}
               height={80}
