@@ -27,7 +27,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${clientName} — Digital Growth Proposal | L3ad Solutions`,
       description: `Custom digital growth proposal for ${clientName} by L3ad Solutions.`,
-      images: ["/logowhite.png"],
+      images: ["/logoblack.png"],
     },
   };
 }
