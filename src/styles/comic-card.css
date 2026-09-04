@@ -347,8 +347,8 @@
 
   /* theme variables consumed by inputs, labels and option buttons */
   --text: #111111;
-  --text-muted: rgba(0, 0, 0, 0.84);
-  --text-soft: rgba(0, 0, 0, 0.68);
+  --text-muted: #111111;
+  --text-soft: #1a1a1a;
   --border: rgba(0, 0, 0, 0.14);
   --border-strong: rgba(0, 0, 0, 0.32);
   --border-accent: rgba(10, 143, 124, 0.6);
@@ -402,9 +402,15 @@
   color: var(--text);
   border-color: rgba(0, 0, 0, 0.18);
 }
-.comic-card--form .input-field::placeholder { color: rgba(0, 0, 0, 0.5); }
+.comic-card--form .input-field::placeholder { color: rgba(0, 0, 0, 0.55); }
+.comic-card--form .input-field { font-size: 1.0625rem; }
 .comic-card--form .input-field:focus { border-color: var(--form-accent); }
-.comic-card--form .input-label { color: #111111; }
+.comic-card--form .input-label { color: #111111; font-size: 1rem; }
+
+/* Larger type for readability on the light panels */
+.comic-card--form .text-sm { font-size: 1rem; line-height: 1.55; }
+.comic-card--form .text-xs { font-size: 0.875rem; line-height: 1.5; }
+.comic-card--form p { line-height: 1.55; }
 
 /* Download links: black text with the brand teal underline */
 .comic-card--form .form-download-link {
