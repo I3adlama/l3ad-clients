@@ -26,7 +26,7 @@ export default function GoalsStep({ data, onChange }: Props) {
   return (
     <SectionWrapper
       title="Goals"
-      subtitle="Last section — what does success look like?"
+      subtitle="Last section: what does success look like?"
     >
       <TextArea
         label="What's the #1 thing you want this website to do for your business?"

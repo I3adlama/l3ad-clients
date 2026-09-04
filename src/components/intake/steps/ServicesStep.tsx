@@ -69,7 +69,7 @@ export default function ServicesStep({
       {/* AI-discovered services verification */}
       {hasAiServices && (
         <div>
-          <span className="input-label">We found these services — uncheck any that don&apos;t apply</span>
+          <span className="input-label">We found these services. Uncheck any that don&apos;t apply</span>
           <div className="space-y-2">
             {(data.verified_services || aiServices).map((service) => {
               const verified = data.verified_services || aiServices;
@@ -137,7 +137,7 @@ export default function ServicesStep({
       )}
 
       <AiSuggestion
-        label="What's your bread and butter — the thing you do the most?"
+        label="What's your bread and butter, the thing you do the most?"
         aiSuggestion={aiPrefill?.specialty}
         currentValue={data.specialty || ""}
         onChange={(v) => update("specialty", v)}
@@ -200,9 +200,9 @@ export default function ServicesStep({
         <RadioGroup
           label="What kind of pricing do you aim for?"
           options={[
-            { value: "budget", label: "Budget-friendly — beat the competition on price" },
-            { value: "mid-range", label: "Mid-range — competitive and fair (Recommended)" },
-            { value: "premium", label: "Premium — quality work, premium price" },
+            { value: "budget", label: "Budget-friendly: beat the competition on price" },
+            { value: "mid-range", label: "Mid-range: competitive and fair (Recommended)" },
+            { value: "premium", label: "Premium: quality work, premium price" },
           ]}
           selected={data.target_margin || ""}
           onChange={(v) => update("target_margin", v)}

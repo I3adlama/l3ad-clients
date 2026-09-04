@@ -21,8 +21,8 @@ export default function WebsiteFeaturesStep({ data, onChange }: Props) {
     >
       <p className="text-[var(--text-soft)] text-sm -mt-2 mb-4">
         Things like contact forms, photo galleries, and SEO are standard.
-        But if you need something special — online ordering, appointment booking,
-        payment processing, a specific integration — let us know.
+        But if you need something special (online ordering, appointment booking,
+        payment processing, a specific integration), let us know.
       </p>
 
       <TextArea
