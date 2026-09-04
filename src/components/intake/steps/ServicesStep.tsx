@@ -146,7 +146,7 @@ export default function ServicesStep({
         minRows={3}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <RadiusSlider
           label="What areas do you serve?"
           value={data.service_area || "25 miles"}

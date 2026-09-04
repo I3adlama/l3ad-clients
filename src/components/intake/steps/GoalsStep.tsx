@@ -36,7 +36,7 @@ export default function GoalsStep({ data, onChange }: Props) {
         name="primary_goal"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <RadioGroup
           label="When do you need this done by?"
           options={[

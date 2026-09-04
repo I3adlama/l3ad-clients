@@ -96,7 +96,7 @@ export default function YourBrandStep({ data, onChange, slug }: Props) {
       title="Your Brand"
       subtitle="Pick what speaks to you. There are no wrong answers."
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <DarkLightPicker
           selected={data.dark_or_light || ""}
           onChange={(v) => update("dark_or_light", v)}
@@ -149,7 +149,7 @@ export default function YourBrandStep({ data, onChange, slug }: Props) {
         onChange={(v) => update("brand_personality", v)}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <StylePicker
           label="Which of these feels closest to what you want?"
           options={WEBSITE_STYLES}
@@ -165,7 +165,7 @@ export default function YourBrandStep({ data, onChange, slug }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <UrlInput
           label="Any websites you love the look of? (up to 3)"
           urls={data.inspiration_urls || []}

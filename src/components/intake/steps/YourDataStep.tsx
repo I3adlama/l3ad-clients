@@ -94,7 +94,7 @@ export default function YourDataStep({ data, onChange, slug }: Props) {
         with door repair and the content strategy follows real demand. That is what this section is for.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <CheckboxGroup
           label="What records do you already keep?"
           options={RECORD_OPTIONS}
@@ -110,7 +110,7 @@ export default function YourDataStep({ data, onChange, slug }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <TextInput
           label="Which tools or software, if any?"
           value={data.tools_used || ""}
@@ -136,7 +136,7 @@ export default function YourDataStep({ data, onChange, slug }: Props) {
           A simple list of inquiries, one row each. Three months is plenty to start. You can export
           it from your software, copy it from a spreadsheet, or use our template.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 mb-4">
+        <div className="space-y-1.5 mb-4">
           {TEMPLATE_COLUMNS.map(([name, hint]) => (
             <div key={name} className="text-sm">
               <span className="text-white">{name}</span>

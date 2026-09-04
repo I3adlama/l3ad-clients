@@ -65,7 +65,7 @@ export default function ContentMediaStep({ data, onChange, slug }: Props) {
       title="Content & Media"
       subtitle="What do you already have that we can work with?"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         {/* Existing website */}
         <div>
           <span className="input-label">Do you have an existing website?</span>
@@ -116,8 +116,8 @@ export default function ContentMediaStep({ data, onChange, slug }: Props) {
         <RadioGroup
           label="Do you have photos of your work?"
           options={[
-            { value: "tons", label: "Tons — I take pics of everything" },
-            { value: "some", label: "Some — a few on my phone" },
+            { value: "tons", label: "Tons, I take pics of everything" },
+            { value: "some", label: "Some, a few on my phone" },
             { value: "not-really", label: "Not really" },
           ]}
           selected={data.has_photos || ""}
@@ -132,12 +132,12 @@ export default function ContentMediaStep({ data, onChange, slug }: Props) {
         onSelect={(v) => update("photo_style", v)}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <RadioGroup
           label="Do you have a logo?"
           options={[
             { value: "yes", label: "Yes" },
-            { value: "sort-of", label: "Sort of — could use a refresh" },
+            { value: "sort-of", label: "Sort of, could use a refresh" },
             { value: "no", label: "No" },
           ]}
           selected={data.has_logo || ""}
@@ -155,7 +155,7 @@ export default function ContentMediaStep({ data, onChange, slug }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <FileUpload
           label="Upload work photos (up to 5)"
           files={data.work_photo_uploads || []}
@@ -166,7 +166,7 @@ export default function ContentMediaStep({ data, onChange, slug }: Props) {
         />
 
         <TextArea
-          label="Anything else — testimonials, certifications, awards?"
+          label="Anything else? Testimonials, certifications, awards"
           value={data.other_content || ""}
           onChange={(v) => update("other_content", v)}
           placeholder="Licensed & insured, BBB accredited, 5-star reviews..."

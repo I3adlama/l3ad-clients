@@ -50,7 +50,7 @@ export default function YourCustomersStep({ data, onChange, aiPrefill }: Props) 
         name="ideal_customer"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-5">
         <CheckboxGroup
           label="How do most customers find you right now?"
           options={DISCOVERY_OPTIONS}

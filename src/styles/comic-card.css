@@ -294,18 +294,18 @@
    ============================================================================ */
 
 .comic-card--dark {
-  --paper-color: #111;
-  --dot-opacity: 0.05;
+  --paper-color: #222;
+  --dot-opacity: 0.04;
   --dot-spacing: 5px;
   --corner-thickness: 2px;
 
-  background: #1a1a1a;
-  border-color: rgba(0, 240, 208, 0.25);
-  filter: drop-shadow(3px 3px 0 rgba(0, 240, 208, 0.1));
+  background: #2a2a2a;
+  border-color: rgba(0, 240, 208, 0.3);
+  filter: drop-shadow(3px 3px 0 rgba(0, 240, 208, 0.12));
 }
 
 .comic-card--dark::before {
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Invert halftone dots to white */
