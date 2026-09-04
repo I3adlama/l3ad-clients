@@ -244,7 +244,7 @@ export default function IntakeWizard({
       )}
 
       <div className="min-h-screen overflow-x-hidden">
-        <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
+        <div className="max-w-[800px] mx-auto px-4 py-6 sm:py-10">
           <div className="mb-6 text-center">
             <h1 className="font-display text-2xl sm:text-3xl">
               Welcome, {clientName}
