@@ -1,5 +1,5 @@
 interface ComicCardProps {
-  variant?: "default" | "burst" | "quiet" | "noir" | "minimal" | "prose" | "dark";
+  variant?: "default" | "burst" | "quiet" | "noir" | "minimal" | "prose" | "dark" | "form";
   floating?: boolean;
   accent?: boolean;
   className?: string;

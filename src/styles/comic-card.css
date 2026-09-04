@@ -333,6 +333,87 @@
 }
 
 /* ============================================================================
+   VARIANT: FORM — Light "paper" panel inside the dark page.
+   Overrides the theme variables so every input, label and option button
+   inside the card renders as a light theme with dark text. The teal accent
+   is darkened for contrast on white.
+   ============================================================================ */
+
+.comic-card--form {
+  --paper-color: #f8f7f4;
+  --dot-opacity: 0.1;
+  --dot-spacing: 5px;
+  --corner-thickness: 2px;
+
+  /* theme variables consumed by inputs, labels and option buttons */
+  --text: #141414;
+  --text-muted: rgba(0, 0, 0, 0.74);
+  --text-soft: rgba(0, 0, 0, 0.52);
+  --border: rgba(0, 0, 0, 0.14);
+  --border-strong: rgba(0, 0, 0, 0.32);
+  --border-accent: rgba(10, 143, 124, 0.6);
+  --bg-elevated: #ffffff;
+  --form-accent: #0a8f7c;
+  --form-accent-strong: #067a69;
+
+  color: var(--text);
+  background: #111;
+  border-color: rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(4px 4px 0 rgba(0, 240, 208, 0.35));
+}
+
+.comic-card--form::before {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.comic-card--form .comic-card__corner {
+  border-color: #111;
+}
+
+.comic-card--form .comic-card__content::before {
+  display: none;
+}
+
+/* Hard-coded dark utilities used by the form components */
+.comic-card--form .text-white:not(.bg-noir-900 *) { color: var(--text); }
+.comic-card--form .text-white\/80 { color: rgba(0, 0, 0, 0.6); }
+.comic-card--form .text-accent { color: var(--form-accent); }
+.comic-card--form .hover\:text-accent-bright:hover,
+.comic-card--form .hover\:text-accent:hover { color: var(--form-accent-strong); }
+.comic-card--form .hover\:text-white:hover { color: var(--text); }
+.comic-card--form .text-red-400 { color: #c62828; }
+.comic-card--form .bg-noir-800:not(.bg-noir-900 *) { background-color: #ffffff; }
+.comic-card--form .bg-noir-700 { background-color: #efeeea; }
+.comic-card--form .bg-noir-600 { background-color: #e4e2dd; }
+.comic-card--form .border-noir-500,
+.comic-card--form .border-noir-600 { border-color: rgba(0, 0, 0, 0.2); }
+.comic-card--form .bg-accent\/5 { background-color: rgba(10, 143, 124, 0.08); }
+.comic-card--form .bg-accent\/10 { background-color: rgba(10, 143, 124, 0.13); }
+.comic-card--form .bg-accent\/20 { background-color: rgba(10, 143, 124, 0.2); }
+.comic-card--form .border-accent,
+.comic-card--form .hover\:border-accent:hover { border-color: var(--form-accent); }
+.comic-card--form .bg-amber-900\/30 { background-color: #f1e6d2; }
+.comic-card--form .bg-blue-900\/30 { background-color: #dde6f2; }
+.comic-card--form .bg-orange-900\/30 { background-color: #f4e3d4; }
+.comic-card--form .bg-green-900\/30 { background-color: #dcecdc; }
+
+.comic-card--form .input-field {
+  background: #ffffff;
+  color: var(--text);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+.comic-card--form .input-field::placeholder { color: rgba(0, 0, 0, 0.42); }
+.comic-card--form .input-field:focus { border-color: var(--form-accent); }
+.comic-card--form .input-label { color: #1f1f1f; }
+.comic-card--form ::selection { background: var(--form-accent); color: #fff; }
+
+@media (max-width: 768px) {
+  .comic-card--form {
+    filter: drop-shadow(3px 3px 0 rgba(0, 240, 208, 0.3));
+  }
+}
+
+/* ============================================================================
    RESPONSIVE ADJUSTMENTS
    ============================================================================ */
 

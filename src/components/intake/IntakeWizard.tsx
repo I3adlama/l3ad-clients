@@ -256,7 +256,7 @@ export default function IntakeWizard({
 
           {/* Section 0: Your Story */}
           <div ref={(el) => { sectionRefs.current[0] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <YourStoryStep
                   data={responses.your_story || {}}
@@ -271,7 +271,7 @@ export default function IntakeWizard({
 
           {/* Section 1: Services */}
           <div ref={(el) => { sectionRefs.current[1] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <ServicesStep
                   data={responses.services || {}}
@@ -288,7 +288,7 @@ export default function IntakeWizard({
 
           {/* Section 2: Your Customers */}
           <div ref={(el) => { sectionRefs.current[2] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <YourCustomersStep
                   data={responses.your_customers || {}}
@@ -303,7 +303,7 @@ export default function IntakeWizard({
 
           {/* Section 3: Your Numbers (internal / original data) */}
           <div ref={(el) => { sectionRefs.current[3] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <YourDataStep
                   data={responses.your_data || {}}
@@ -318,7 +318,7 @@ export default function IntakeWizard({
 
           {/* Section 4: Your Brand */}
           <div ref={(el) => { sectionRefs.current[4] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <YourBrandStep
                   data={responses.your_brand || {}}
@@ -333,7 +333,7 @@ export default function IntakeWizard({
 
           {/* Section 5: Content & Media */}
           <div ref={(el) => { sectionRefs.current[5] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <ContentMediaStep
                   data={responses.content_media || {}}
@@ -348,7 +348,7 @@ export default function IntakeWizard({
 
           {/* Section 6: Special Requests */}
           <div ref={(el) => { sectionRefs.current[6] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <WebsiteFeaturesStep
                   data={responses.website_features || {}}
@@ -362,7 +362,7 @@ export default function IntakeWizard({
 
           {/* Section 7: Goals */}
           <div ref={(el) => { sectionRefs.current[7] = el; }}>
-            <ComicCard variant="dark">
+            <ComicCard variant="form">
               <div className="p-5 sm:p-6">
                 <GoalsStep
                   data={responses.goals || {}}
