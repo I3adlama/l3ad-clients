@@ -147,7 +147,7 @@ export default function YourDataStep({ data, onChange, slug }: Props) {
         <a
           href="/templates/lead-log-template.csv"
           download
-          className="inline-block text-sm font-ui tracking-wider uppercase text-accent hover:text-accent-bright"
+          className="form-download-link inline-block text-sm font-ui tracking-wider uppercase"
         >
           Download the template (CSV)
         </a>

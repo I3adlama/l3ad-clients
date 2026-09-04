@@ -340,15 +340,15 @@
    ============================================================================ */
 
 .comic-card--form {
-  --paper-color: #f8f7f4;
-  --dot-opacity: 0.1;
+  --paper-color: #f1f1f1;
+  --dot-opacity: 0.08;
   --dot-spacing: 5px;
   --corner-thickness: 2px;
 
   /* theme variables consumed by inputs, labels and option buttons */
-  --text: #141414;
-  --text-muted: rgba(0, 0, 0, 0.74);
-  --text-soft: rgba(0, 0, 0, 0.52);
+  --text: #111111;
+  --text-muted: rgba(0, 0, 0, 0.84);
+  --text-soft: rgba(0, 0, 0, 0.68);
   --border: rgba(0, 0, 0, 0.14);
   --border-strong: rgba(0, 0, 0, 0.32);
   --border-accent: rgba(10, 143, 124, 0.6);
@@ -377,14 +377,14 @@
 /* Hard-coded dark utilities used by the form components */
 .comic-card--form .text-white:not(.bg-noir-900 *) { color: var(--text); }
 .comic-card--form .text-white\/80 { color: rgba(0, 0, 0, 0.6); }
-.comic-card--form .text-accent { color: var(--form-accent); }
+.comic-card--form .text-accent { color: var(--text); }
 .comic-card--form .hover\:text-accent-bright:hover,
 .comic-card--form .hover\:text-accent:hover { color: var(--form-accent-strong); }
 .comic-card--form .hover\:text-white:hover { color: var(--text); }
 .comic-card--form .text-red-400 { color: #c62828; }
 .comic-card--form .bg-noir-800:not(.bg-noir-900 *) { background-color: #ffffff; }
-.comic-card--form .bg-noir-700 { background-color: #efeeea; }
-.comic-card--form .bg-noir-600 { background-color: #e4e2dd; }
+.comic-card--form .bg-noir-700 { background-color: #e6e6e6; }
+.comic-card--form .bg-noir-600 { background-color: #dcdcdc; }
 .comic-card--form .border-noir-500,
 .comic-card--form .border-noir-600 { border-color: rgba(0, 0, 0, 0.2); }
 .comic-card--form .bg-accent\/5 { background-color: rgba(10, 143, 124, 0.08); }
@@ -402,9 +402,19 @@
   color: var(--text);
   border-color: rgba(0, 0, 0, 0.18);
 }
-.comic-card--form .input-field::placeholder { color: rgba(0, 0, 0, 0.42); }
+.comic-card--form .input-field::placeholder { color: rgba(0, 0, 0, 0.5); }
 .comic-card--form .input-field:focus { border-color: var(--form-accent); }
-.comic-card--form .input-label { color: #1f1f1f; }
+.comic-card--form .input-label { color: #111111; }
+
+/* Download links: black text with the brand teal underline */
+.comic-card--form .form-download-link {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: #00f0d0;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+.comic-card--form .form-download-link:hover { text-decoration-color: #00b89c; }
 .comic-card--form ::selection { background: var(--form-accent); color: #fff; }
 
 @media (max-width: 768px) {
