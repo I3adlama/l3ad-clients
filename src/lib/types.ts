@@ -56,6 +56,17 @@ export interface IntakeResponses {
     how_they_find_you?: string[];
     want_more_of?: string;
   };
+  /** Internal / original data: what records the client keeps and how they'll share them */
+  your_data?: {
+    records_kept?: string[];
+    data_location?: string[];
+    tools_used?: string;
+    monthly_inquiries?: string;
+    share_method?: string;
+    uploads?: UploadedFile[];
+    known_patterns?: string;
+    aggregate_ok?: string;
+  };
   your_brand?: {
     dark_or_light?: string;
     brand_personality?: string[];
@@ -150,6 +161,7 @@ export const STEP_SECTIONS: (keyof IntakeResponses)[] = [
   "your_story",
   "services",
   "your_customers",
+  "your_data",
   "your_brand",
   "content_media",
   "website_features",
@@ -160,6 +172,7 @@ export const STEP_LABELS = [
   "Your Story",
   "Services",
   "Your Customers",
+  "Your Numbers",
   "Your Brand",
   "Content & Media",
   "Website Features",

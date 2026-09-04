@@ -60,6 +60,16 @@ function summarizeResponses(r: IntakeResponses): string {
       line("How they find them", r.your_customers?.how_they_find_you),
       line("Wants more of", r.your_customers?.want_more_of),
     ]],
+    ["Their Numbers", [
+      line("Records kept", r.your_data?.records_kept),
+      line("Where it lives", r.your_data?.data_location),
+      line("Tools", r.your_data?.tools_used),
+      line("Monthly inquiries", r.your_data?.monthly_inquiries),
+      line("How they'll share", r.your_data?.share_method),
+      line("Data files", r.your_data?.uploads),
+      line("What they already know", r.your_data?.known_patterns),
+      line("OK to publish anonymized totals", r.your_data?.aggregate_ok),
+    ]],
     ["Brand", [
       line("Dark or light", r.your_brand?.dark_or_light),
       line("Personality", r.your_brand?.brand_personality),

@@ -11,6 +11,7 @@ import BevelButton from "@/components/ui/BevelButton";
 import YourStoryStep from "./steps/YourStoryStep";
 import ServicesStep from "./steps/ServicesStep";
 import YourCustomersStep from "./steps/YourCustomersStep";
+import YourDataStep from "./steps/YourDataStep";
 import YourBrandStep from "./steps/YourBrandStep";
 import ContentMediaStep from "./steps/ContentMediaStep";
 import WebsiteFeaturesStep from "./steps/WebsiteFeaturesStep";
@@ -300,8 +301,23 @@ export default function IntakeWizard({
 
           <SectionDivider />
 
-          {/* Section 3: Your Brand */}
+          {/* Section 3: Your Numbers (internal / original data) */}
           <div ref={(el) => { sectionRefs.current[3] = el; }}>
+            <ComicCard variant="dark">
+              <div className="p-5 sm:p-6">
+                <YourDataStep
+                  data={responses.your_data || {}}
+                  onChange={(d) => updateSection("your_data", d)}
+                  slug={slug}
+                />
+              </div>
+            </ComicCard>
+          </div>
+
+          <SectionDivider />
+
+          {/* Section 4: Your Brand */}
+          <div ref={(el) => { sectionRefs.current[4] = el; }}>
             <ComicCard variant="dark">
               <div className="p-5 sm:p-6">
                 <YourBrandStep
@@ -315,8 +331,8 @@ export default function IntakeWizard({
 
           <SectionDivider />
 
-          {/* Section 4: Content & Media */}
-          <div ref={(el) => { sectionRefs.current[4] = el; }}>
+          {/* Section 5: Content & Media */}
+          <div ref={(el) => { sectionRefs.current[5] = el; }}>
             <ComicCard variant="dark">
               <div className="p-5 sm:p-6">
                 <ContentMediaStep
@@ -330,8 +346,8 @@ export default function IntakeWizard({
 
           <SectionDivider />
 
-          {/* Section 5: Special Requests */}
-          <div ref={(el) => { sectionRefs.current[5] = el; }}>
+          {/* Section 6: Special Requests */}
+          <div ref={(el) => { sectionRefs.current[6] = el; }}>
             <ComicCard variant="dark">
               <div className="p-5 sm:p-6">
                 <WebsiteFeaturesStep
@@ -344,8 +360,8 @@ export default function IntakeWizard({
 
           <SectionDivider />
 
-          {/* Section 6: Goals */}
-          <div ref={(el) => { sectionRefs.current[6] = el; }}>
+          {/* Section 7: Goals */}
+          <div ref={(el) => { sectionRefs.current[7] = el; }}>
             <ComicCard variant="dark">
               <div className="p-5 sm:p-6">
                 <GoalsStep

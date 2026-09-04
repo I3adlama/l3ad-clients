@@ -9,11 +9,15 @@ export const ALLOWED_UPLOAD_TYPES = [
   "image/heif",
   "image/svg+xml",
   "application/pdf",
+  "text/csv",
+  "text/plain",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25MB
 
-export const UPLOAD_HINT = "JPEG, PNG, WebP, GIF, HEIC, SVG, or PDF. Max 25MB each.";
+export const UPLOAD_HINT = "Images, PDF, CSV, or Excel. Max 25MB each.";
 
 /** Some browsers report an empty type for HEIC and other camera formats; fall back to the extension. */
 export function detectUploadType(file: { name: string; type: string }): string {
@@ -29,6 +33,10 @@ export function detectUploadType(file: { name: string; type: string }): string {
     heif: "image/heif",
     svg: "image/svg+xml",
     pdf: "application/pdf",
+    csv: "text/csv",
+    txt: "text/plain",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   };
   return (ext && byExt[ext]) || "";
 }

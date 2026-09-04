@@ -24,6 +24,29 @@ const MARGIN_LABELS: Record<string, string> = {
   premium: "Premium",
 };
 
+const VOLUME_LABELS: Record<string, string> = {
+  "under-10": "Under 10 a month",
+  "10-25": "10 to 25 a month",
+  "25-50": "25 to 50 a month",
+  "50-100": "50 to 100 a month",
+  "100-plus": "100+ a month",
+  "not-sure": "Not sure",
+};
+
+const SHARE_LABELS: Record<string, string> = {
+  "upload-now": "Uploaded a file",
+  "fill-template": "Will fill out the template",
+  "give-access": "Will give software access",
+  call: "Walk through on a call",
+  "not-sharing": "Prefers not to share",
+};
+
+const AGGREGATE_LABELS: Record<string, string> = {
+  yes: "Yes",
+  "ask-first": "Ask first each time",
+  no: "No",
+};
+
 const DARK_LIGHT_LABELS: Record<string, string> = {
   dark: "Dark & Bold",
   light: "Light & Clean",
@@ -70,7 +93,7 @@ interface ResponseBriefProps {
 }
 
 export default function ResponseBrief({ responses }: ResponseBriefProps) {
-  const { your_story, services, your_customers, your_brand, look_and_feel, content_media, website_features, goals } = responses;
+  const { your_story, services, your_customers, your_data, your_brand, look_and_feel, content_media, website_features, goals } = responses;
 
   // Use your_brand if available, fall back to look_and_feel for old data
   const brandData = your_brand || look_and_feel;
@@ -111,6 +134,17 @@ export default function ResponseBrief({ responses }: ResponseBriefProps) {
       ["Ideal customer", your_customers?.ideal_customer],
       ["How they find them", your_customers?.how_they_find_you],
       ["Wants more of", your_customers?.want_more_of],
+    ]);
+
+    addSection("Their Numbers", [
+      ["Records kept", your_data?.records_kept],
+      ["Where it lives", your_data?.data_location],
+      ["Tools", your_data?.tools_used],
+      ["Monthly inquiries", your_data?.monthly_inquiries ? VOLUME_LABELS[your_data.monthly_inquiries] || your_data.monthly_inquiries : undefined],
+      ["How they'll share", your_data?.share_method ? SHARE_LABELS[your_data.share_method] || your_data.share_method : undefined],
+      ["Data files", your_data?.uploads?.map(f => `${f.filename} (${f.url})`)],
+      ["What they already know", your_data?.known_patterns],
+      ["OK to publish anonymized totals", your_data?.aggregate_ok ? AGGREGATE_LABELS[your_data.aggregate_ok] || your_data.aggregate_ok : undefined],
     ]);
 
     addSection("Brand", [
@@ -219,6 +253,45 @@ export default function ResponseBrief({ responses }: ResponseBriefProps) {
           <Field label="Ideal customer" value={your_customers.ideal_customer} />
           <Field label="How customers find them" value={your_customers.how_they_find_you} />
           <Field label="Wants more of" value={your_customers.want_more_of} />
+        </Section>
+      )}
+
+      {your_data && (
+        <Section title="Their Numbers">
+          <Field label="Records kept" value={your_data.records_kept} />
+          <Field label="Where it lives" value={your_data.data_location} />
+          <Field label="Tools" value={your_data.tools_used} />
+          <Field
+            label="Monthly inquiries"
+            value={your_data.monthly_inquiries ? VOLUME_LABELS[your_data.monthly_inquiries] || your_data.monthly_inquiries : undefined}
+          />
+          <Field
+            label="How they'll share"
+            value={your_data.share_method ? SHARE_LABELS[your_data.share_method] || your_data.share_method : undefined}
+          />
+          {your_data.uploads && your_data.uploads.length > 0 && (
+            <div>
+              <span className="text-[var(--text-soft)] text-sm">Data files</span>
+              <div className="space-y-1 mt-1">
+                {your_data.uploads.map((file, i) => (
+                  <a
+                    key={i}
+                    href={file.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-accent text-sm truncate hover:text-accent-bright"
+                  >
+                    {file.filename}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          <Field label="What they already know" value={your_data.known_patterns} />
+          <Field
+            label="OK to publish anonymized totals"
+            value={your_data.aggregate_ok ? AGGREGATE_LABELS[your_data.aggregate_ok] || your_data.aggregate_ok : undefined}
+          />
         </Section>
       )}
 
