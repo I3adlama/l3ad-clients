@@ -52,12 +52,18 @@ const AGGREGATE_OPTIONS = [
 ];
 
 const TEMPLATE_COLUMNS: [string, string][] = [
-  ["Date", "When they reached out"],
-  ["What they asked for", "The service or problem, in their words"],
-  ["How they found you", "Google, referral, Facebook, yard sign..."],
-  ["Town or ZIP", "Where the job was"],
-  ["Outcome", "Booked, quoted, or lost"],
-  ["Job value", "Optional, even a rough number helps"],
+  ["Date", "when they reached out"],
+  ["What they asked for", "in their words"],
+  ["How they found you", "Google, referral, sign..."],
+  ["Town or ZIP", "where the job was"],
+  ["Outcome", "booked, quoted, lost"],
+  ["Job value", "optional"],
+];
+
+const TEMPLATE_EXAMPLES: string[][] = [
+  ["Aug 3", "Front door won't latch", "Google search", "Titusville 32796", "Booked", "$275"],
+  ["Aug 5", "Drywall patch, two holes", "Referral", "Mims 32754", "Quoted", "$180"],
+  ["Aug 9", "Fence install", "Facebook", "Cocoa 32922", "Lost", ""],
 ];
 
 interface YourDataData {
@@ -129,31 +135,51 @@ export default function YourDataStep({ data, onChange, slug }: Props) {
 
       {/* Template: what we are looking for */}
       <div className="rounded-md border border-[var(--border-accent)] bg-accent/5 p-4">
-        <p className="text-xs text-accent font-semibold uppercase tracking-wider mb-2">
-          What we&apos;re looking for
+        <p className="text-base font-bold text-[var(--text)]">What we&apos;re looking for</p>
+        <p className="text-sm text-[var(--text-muted)] mt-1 mb-3">
+          One row per inquiry. Three months is plenty to start. Export it from your software, copy it
+          from a spreadsheet, or fill in our template. It looks like this:
         </p>
-        <p className="text-sm text-[var(--text-muted)] mb-3">
-          A simple list of inquiries, one row each. Three months is plenty to start. You can export
-          it from your software, copy it from a spreadsheet, or use our template.
-        </p>
-        <div className="space-y-1.5 mb-4">
-          {TEMPLATE_COLUMNS.map(([name, hint]) => (
-            <div key={name} className="text-sm">
-              <span className="text-white">{name}</span>
-              <span className="text-[var(--text-soft)]"> · {hint}</span>
-            </div>
-          ))}
+
+        <div className="overflow-x-auto rounded-md border border-[var(--border-strong)] bg-white">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-noir-700">
+                {TEMPLATE_COLUMNS.map(([name, hint]) => (
+                  <th key={name} className="text-left align-top px-3 py-2 border-b border-[var(--border-strong)] whitespace-nowrap">
+                    <span className="block font-bold text-[var(--text)]">{name}</span>
+                    <span className="block text-xs font-normal text-[var(--text-soft)]">{hint}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {TEMPLATE_EXAMPLES.map((row, i) => (
+                <tr key={i} className={i % 2 ? "bg-noir-700" : ""}>
+                  {row.map((cell, j) => (
+                    <td key={j} className="px-3 py-2 whitespace-nowrap text-[var(--text-muted)] border-b border-[var(--border)]">
+                      {cell || <span className="text-[var(--text-soft)]">&mdash;</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <a
-          href="/templates/lead-log-template.csv"
-          download
-          className="form-download-link inline-block text-sm font-ui tracking-wider uppercase"
-        >
-          Download the template (CSV)
-        </a>
-        <p className="text-xs text-[var(--text-soft)] mt-2">
-          Names, phone numbers and addresses are not needed. We only use the totals.
-        </p>
+
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <a
+            href="/templates/lead-log-template.csv"
+            download
+            className="form-download-link inline-block text-sm font-ui tracking-wider uppercase"
+          >
+            Download the template (CSV)
+          </a>
+          <p className="text-xs text-[var(--text-soft)] flex items-center gap-1.5">
+            <i className="bi bi-lock-fill" aria-hidden="true" />
+            No names, phone numbers, or addresses needed. We only use the totals.
+          </p>
+        </div>
       </div>
 
       <RadioGroup
