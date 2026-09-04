@@ -178,7 +178,7 @@ export default function YourBrandStep({ data, onChange, slug }: Props) {
           label="Got any images that show the vibe? Logos, screenshots, anything"
           files={data.uploads || []}
           onChange={(f) => update("uploads", f)}
-          uploadUrl={`/api/intake/${slug}/upload`}
+          slug={slug}
           max={3}
         />
       </div>

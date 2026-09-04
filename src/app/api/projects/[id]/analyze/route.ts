@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { verifySession } from "@/lib/auth";
-import { analyzeBusinessLinks, analyzeFromUrl } from "@/lib/agent";
+import { analyzeBusinessLinks, analyzeFromUrl, type BusinessAnalysis } from "@/lib/agent";
+import { jsonEqual } from "@/lib/ai/text";
+
+export const runtime = "nodejs";
+// Crawl + five model calls (two in parallel) + web research; well under this on a normal run.
+export const maxDuration = 300;
+
+type SocialUrl = { platform: string; url: string };
 
 export async function POST(
   _req: NextRequest,
@@ -16,7 +23,10 @@ export async function POST(
   const sql = getDb();
 
   const projects = await sql`
-    SELECT * FROM projects WHERE id = ${id}::uuid
+    SELECT p.*, ir.responses AS intake_responses, ir.completed AS intake_completed
+    FROM projects p
+    LEFT JOIN intake_responses ir ON ir.project_id = p.id
+    WHERE p.id = ${id}::uuid
   `;
 
   if (projects.length === 0) {
@@ -24,9 +34,10 @@ export async function POST(
   }
 
   const project = projects[0];
+  const previous = (project.ai_analysis as BusinessAnalysis | null) || null;
 
   try {
-    let analysis;
+    let analysis: BusinessAnalysis;
 
     if (project.source_url) {
       // URL-first flow: discover everything from the source URL
@@ -35,17 +46,15 @@ export async function POST(
         (project.notes as string) || ""
       );
 
-      // Write back discovered business info to the project
-      const discoveredSocials = analysis.discovered_social_urls || [];
-      const existingUrls = (project.social_urls as { platform: string; url: string }[]) || [];
-
-      // Merge discovered URLs with existing ones (deduplicate by URL)
-      const seenUrls = new Set(existingUrls.map((u) => u.url));
+      // Merge discovered profile links with anything already on the project (dedupe by URL)
+      const existingUrls = (project.social_urls as SocialUrl[]) || [];
+      const seen = new Set(existingUrls.map((u) => u.url.replace(/\/$/, "")));
       const mergedUrls = [...existingUrls];
-      for (const link of discoveredSocials) {
-        if (!seenUrls.has(link.url)) {
+      for (const link of analysis.discovered_social_urls || []) {
+        const key = link.url.replace(/\/$/, "");
+        if (!seen.has(key)) {
           mergedUrls.push(link);
-          seenUrls.add(link.url);
+          seen.add(key);
         }
       }
 
@@ -61,13 +70,10 @@ export async function POST(
       `;
     } else {
       // Legacy flow: analyze from manually-entered social URLs
-      const urls = (project.social_urls as { platform: string; url: string }[]) || [];
+      const urls = (project.social_urls as SocialUrl[]) || [];
 
       if (urls.length === 0) {
-        return NextResponse.json(
-          { error: "No URLs to analyze" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "No URLs to analyze" }, { status: 400 });
       }
 
       analysis = await analyzeBusinessLinks(
@@ -80,26 +86,34 @@ export async function POST(
       await sql`
         UPDATE projects
         SET ai_analysis = ${JSON.stringify(analysis)}::jsonb,
+            business_type = COALESCE(${analysis.business_type || null}, business_type),
+            location = COALESCE(${analysis.location || null}, location),
             updated_at = NOW()
         WHERE id = ${id}::uuid
       `;
     }
 
-    // Pre-fill the intake responses with discovered data
-    if (analysis.prefill) {
-      const prefillData = JSON.stringify(analysis.prefill);
+    // Pre-fill the intake form with the discovered answers. Safe only while the client
+    // has not started: the stored responses are empty or exactly the previous prefill.
+    const currentResponses = (project.intake_responses as Record<string, unknown> | null) || {};
+    const untouched =
+      !project.intake_completed &&
+      (Object.keys(currentResponses).length === 0 ||
+        (previous?.prefill ? jsonEqual(currentResponses, previous.prefill) : false));
+
+    if (analysis.prefill && untouched) {
       await sql`
         UPDATE intake_responses
-        SET responses = responses || ${prefillData}::jsonb
+        SET responses = ${JSON.stringify(analysis.prefill)}::jsonb,
+            current_step = 0
         WHERE project_id = ${id}::uuid
-        AND (responses = '{}'::jsonb OR responses IS NULL)
       `;
     }
 
-    return NextResponse.json(analysis);
+    return NextResponse.json({ ...analysis, prefill_applied: untouched });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Analysis failed";
+    const message = error instanceof Error ? error.message : "Analysis failed";
+    console.error(`[analyze] project ${id} failed:`, error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

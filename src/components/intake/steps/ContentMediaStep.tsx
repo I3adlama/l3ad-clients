@@ -160,9 +160,9 @@ export default function ContentMediaStep({ data, onChange, slug }: Props) {
           label="Upload work photos (up to 5)"
           files={data.work_photo_uploads || []}
           onChange={(f) => update("work_photo_uploads", f)}
-          uploadUrl={`/api/intake/${slug}/upload`}
+          slug={slug}
           max={5}
-          accept="image/*"
+          accept="image/*,.heic,.heif"
         />
 
         <TextArea

@@ -27,6 +27,21 @@ interface IntakeWizardProps {
   location?: string;
 }
 
+const AUTOSAVE_DELAY_MS = 1500;
+
+/** True when the client has typed or picked at least one real answer. */
+function hasAnyAnswer(responses: IntakeResponses): boolean {
+  for (const section of Object.values(responses)) {
+    if (!section || typeof section !== "object") continue;
+    for (const value of Object.values(section as Record<string, unknown>)) {
+      if (typeof value === "string" && value.trim()) return true;
+      if (typeof value === "boolean") return true;
+      if (Array.isArray(value) && value.length > 0) return true;
+    }
+  }
+  return false;
+}
+
 export default function IntakeWizard({
   slug,
   clientName,
@@ -37,77 +52,74 @@ export default function IntakeWizard({
   location,
 }: IntakeWizardProps) {
   const [responses, setResponses] = useState<IntakeResponses>(initialResponses);
-  const [isSaving, setIsSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Track which sections have been modified for debounced auto-save
+  // Always-current copy of responses so timers and unload handlers never see stale state
+  const responsesRef = useRef<IntakeResponses>(initialResponses);
   const dirtyRef = useRef<Set<number>>(new Set());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastModifiedRef = useRef<number>(0);
+  const submittedRef = useRef(false);
 
-  // Section refs for scrolling
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-
   const totalSteps = STEP_SECTIONS.length;
 
   // --- Save logic ---
 
   const saveSection = useCallback(
-    async (step: number, completed = false) => {
+    async (step: number, keepalive = false) => {
       const sectionKey = STEP_SECTIONS[step];
       const res = await fetch(`/api/intake/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        keepalive,
         body: JSON.stringify({
           step,
           section_key: sectionKey,
-          data: responses[sectionKey] || {},
-          completed,
+          data: responsesRef.current[sectionKey] || {},
         }),
       });
       if (!res.ok) {
         throw new Error(`Save failed for ${sectionKey} (${res.status})`);
       }
     },
-    [slug, responses]
+    [slug]
   );
 
   const saveDirtySections = useCallback(async () => {
+    if (submittedRef.current) return;
     const dirty = Array.from(dirtyRef.current);
     if (dirty.length === 0) return;
 
+    dirtyRef.current.clear();
     setSaveStatus("saving");
-    setIsSaving(true);
     try {
       await Promise.all(dirty.map((step) => saveSection(step)));
-      dirtyRef.current.clear();
       setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
+      setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 2000);
     } catch (err) {
-      console.error("Failed to save:", err);
-      setSaveStatus("idle");
-    } finally {
-      setIsSaving(false);
+      console.error("Autosave failed:", err);
+      // Put the sections back so the next edit retries them
+      for (const step of dirty) dirtyRef.current.add(step);
+      setSaveStatus("error");
     }
   }, [saveSection]);
 
-  // Debounced auto-save: 2s after last keystroke
   const scheduleSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       saveDirtySections();
-    }, 2000);
+    }, AUTOSAVE_DELAY_MS);
   }, [saveDirtySections]);
 
-  function updateSection(key: keyof IntakeResponses, data: IntakeResponses[typeof key]) {
-    setResponses((prev) => ({ ...prev, [key]: data }));
+  function updateSection<K extends keyof IntakeResponses>(key: K, data: IntakeResponses[K]) {
+    const next = { ...responsesRef.current, [key]: data };
+    responsesRef.current = next;
+    setResponses(next);
     const stepIndex = STEP_SECTIONS.indexOf(key);
-    if (stepIndex !== -1) {
-      dirtyRef.current.add(stepIndex);
-      lastModifiedRef.current = stepIndex;
-    }
+    if (stepIndex !== -1) dirtyRef.current.add(stepIndex);
     scheduleSave();
   }
 
@@ -115,34 +127,41 @@ export default function IntakeWizard({
 
   async function handleSubmit() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-
-    setIsSaving(true);
-    setSaveStatus("saving");
     setSubmitError(null);
-    try {
-      // Save all sections, last one with completed: true
-      await Promise.all(
-        STEP_SECTIONS.map((_, i) => saveSection(i, i === totalSteps - 1))
-      );
 
-      // Notify admin via Web3Forms (only after successful save)
-      fetch("https://api.web3forms.com/submit", {
+    if (!hasAnyAnswer(responsesRef.current)) {
+      setSubmitError("Answer at least a few questions before submitting, even short answers help.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSaveStatus("saving");
+    try {
+      const res = await fetch(`/api/intake/${slug}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          access_key: "e9fbf786-bbd1-47c8-80b8-1b98a141a58a",
-          subject: `Intake completed: ${clientName}`,
-          from_name: "L3ad Clients",
-          message: `${clientName} just completed their intake form.\n\nView responses: ${window.location.origin}/admin`,
-        }),
-      }).catch(() => {});
+        body: JSON.stringify({ action: "submit", responses: responsesRef.current }),
+      });
 
+      if (!res.ok) {
+        let message = "Something went wrong saving your responses. Please try again.";
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {
+          /* non-JSON error body */
+        }
+        throw new Error(message);
+      }
+
+      submittedRef.current = true;
+      dirtyRef.current.clear();
       window.location.href = `/intake/${slug}/thank-you`;
     } catch (err) {
       console.error("Submit failed:", err);
-      setSubmitError("Something went wrong saving your responses. Please try again.");
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSaveStatus("idle");
-      setIsSaving(false);
+      setSubmitting(false);
     }
   }
 
@@ -168,22 +187,34 @@ export default function IntakeWizard({
     }
   }, [initialStep]);
 
-  // --- beforeunload beacon ---
+  // --- Flush unsaved edits when the tab is hidden or closed ---
 
   useEffect(() => {
-    function onBeforeUnload() {
-      const step = lastModifiedRef.current;
-      const sectionKey = STEP_SECTIONS[step];
-      const data = responses[sectionKey] || {};
-      const blob = new Blob(
-        [JSON.stringify({ step, section_key: sectionKey, data })],
-        { type: "application/json" }
-      );
-      navigator.sendBeacon(`/api/intake/${slug}`, blob);
+    function flush() {
+      if (submittedRef.current || dirtyRef.current.size === 0) return;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      const dirty = Array.from(dirtyRef.current);
+      dirtyRef.current.clear();
+      for (const step of dirty) {
+        saveSection(step, true).catch(() => dirtyRef.current.add(step));
+      }
     }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [responses, slug]);
+    function onVisibility() {
+      if (document.visibilityState === "hidden") flush();
+    }
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [saveSection]);
+
+  const statusLabel =
+    saveStatus === "saving" ? "Saving..." :
+    saveStatus === "saved" ? "Saved" :
+    saveStatus === "error" ? "Couldn't save, will retry" :
+    "";
 
   return (
     <AppShell>
@@ -197,6 +228,20 @@ export default function IntakeWizard({
         />
       </div>
 
+      {/* Save status pill */}
+      {statusLabel && (
+        <div
+          className={`fixed top-3 right-3 z-50 text-[11px] font-ui uppercase tracking-wider px-2.5 py-1 rounded border ${
+            saveStatus === "error"
+              ? "border-red-400/40 bg-red-400/10 text-red-300"
+              : "border-[var(--border)] bg-noir-900/90 text-[var(--text-soft)]"
+          }`}
+          aria-live="polite"
+        >
+          {statusLabel}
+        </div>
+      )}
+
       <div className="min-h-screen overflow-x-hidden">
         <div className="max-w-2xl mx-auto px-4 py-6 sm:py-10">
           <div className="mb-6 text-center">
@@ -204,7 +249,7 @@ export default function IntakeWizard({
               Welcome, {clientName}
             </h1>
             <p className="text-[var(--text-soft)] text-sm mt-1">
-              Let&apos;s build something great together.
+              Let&apos;s build something great together. Your answers save as you go.
             </p>
           </div>
 
@@ -313,21 +358,14 @@ export default function IntakeWizard({
 
           {/* Submit area */}
           <div className="mt-10 flex flex-col items-center gap-3">
-            {saveStatus === "saved" && (
-              <span className="text-accent text-xs font-ui uppercase tracking-wider">
-                Saved
-              </span>
-            )}
-            {saveStatus === "saving" && (
-              <span className="text-[var(--text-soft)] text-xs font-ui uppercase tracking-wider">
-                Saving...
-              </span>
-            )}
-            <BevelButton onClick={handleSubmit} disabled={isSaving} size="lg">
-              {isSaving ? "Submitting..." : "Submit"}
+            <BevelButton onClick={handleSubmit} disabled={submitting} size="lg">
+              {submitting ? "Submitting..." : "Submit"}
             </BevelButton>
+            <p className="text-[var(--text-soft)] text-xs text-center">
+              {totalSteps} sections. You can come back to this link any time before you submit.
+            </p>
             {submitError && (
-              <p className="text-red-400 text-sm text-center mt-2">{submitError}</p>
+              <p className="text-red-400 text-sm text-center mt-2" role="alert">{submitError}</p>
             )}
           </div>
 

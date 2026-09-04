@@ -1,44 +1,35 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { MODELS, callStructured, callWithWebSearch, withManagerFallback, describeError, type ModelId } from "./ai/client";
+import {
+  crawlSite,
+  fetchLinkedPages,
+  pageHasContent,
+  renderPagesContext,
+  renderPagesSummary,
+  sourcesSummary,
+  type CrawledPage,
+  type DiscoveredLink,
+  type PageStatus,
+} from "./ai/crawl";
+import {
+  PlanSchema,
+  ExtractionSchema,
+  CoreAnalysisSchema,
+  GuidanceSchema,
+  ApprovalSchema,
+  type Plan,
+  type Extraction,
+  type AnalysisDraft,
+  type Approval,
+  type Market,
+} from "./ai/schemas";
+import { deepScrub, pruneEmpty, sameText, todayLine } from "./ai/text";
 
-const client = new Anthropic({ apiKey: process.env.AGENT_1 });
-
-// Latest models — optimized for cost and quality
-const MODELS = {
-  fast: "claude-haiku-4-5-20251001", // $1/$5  — extraction grunt work
-  balanced: "claude-sonnet-4-6",     // $3/$15 — creative generation
-  quality: "claude-opus-4-6",        // $5/$25 — strategy + final approval
-} as const;
+export { generateProposal, type ProposalProjectContext } from "./ai/proposal";
 
 // ============================================================================
-// PUBLIC TYPES
+// PUBLIC TYPES (persisted as projects.ai_analysis)
 // ============================================================================
-
-export interface BusinessAnalysis {
-  business_name: string;
-  business_type: string;
-  location: string;
-  services: string[];
-  description: string;
-  tone: string;
-  branding_clues: string[];
-  review_highlights: string[];
-  strengths: string[];
-  suggested_questions: SuggestedQuestion[];
-  prefill: PrefillData;
-  discovered_social_urls?: { platform: string; url: string }[];
-  _meta: AnalysisMeta;
-}
-
-export interface AnalysisMeta {
-  models_used: string[];
-  pages_fetched: number;
-  pages_with_content: number;
-  follow_up_performed: boolean;
-  quality_score: string;
-  approved: boolean;
-  approval_notes: string;
-}
 
 export interface SuggestedQuestion {
   section: string;
@@ -70,1143 +61,562 @@ export interface PrefillData {
   };
 }
 
-// ============================================================================
-// INTERNAL TYPES
-// ============================================================================
-
-// Opus plan from Step 1
-interface OpusPlan {
-  business_category: string;
-  extraction_focus: string[];
-  key_questions: string[];
-  look_for: string[];
-  red_flags: string[];
-  strategy_notes: string;
+export interface AnalysisSource {
+  label: string;
+  url: string;
+  status: PageStatus;
+  note: string;
 }
 
-// Extended plan for URL-first flow — Opus also discovers business identity
-interface OpusPlanFromUrl extends OpusPlan {
-  discovered_name: string;
-  discovered_location: string;
+export interface AnalysisMeta {
+  models_used: string[];
+  pages_fetched: number;
+  pages_with_content: number;
+  follow_up_performed: boolean;
+  research_performed: boolean;
+  research_searches: number;
+  quality_score: string;
+  approved: boolean;
+  approval_notes: string;
+  /** Raw web research notes (truncated) so the admin can see what the model actually found. */
+  research_notes?: string;
+  sources: AnalysisSource[];
+  analyzed_at: string;
+  duration_seconds: number;
 }
 
-// Haiku extraction from Step 2
-interface RawExtraction {
+export interface BusinessAnalysis {
   business_name: string;
   business_type: string;
   location: string;
+  founded?: string;
   services: string[];
+  team?: { name: string; role: string }[];
+  locations?: { name: string; address: string; phone: string }[];
   description: string;
   tone: string;
   branding_clues: string[];
   review_highlights: string[];
   strengths: string[];
-  raw_facts: string[];
-  data_gaps: string[];
-  confidence: "low" | "medium" | "high";
+  market?: Market;
+  suggested_questions: SuggestedQuestion[];
+  prefill: PrefillData;
+  discovered_social_urls?: DiscoveredLink[];
+  _meta: AnalysisMeta;
 }
 
-// Opus final approval from Step 4
-interface OpusApproval {
-  approved: boolean;
-  quality_score: "poor" | "fair" | "good" | "excellent";
-  corrections: {
-    field: string;
-    current: string;
-    corrected: string;
-  }[];
-  question_overrides: {
-    remove_index?: number;
-    add?: SuggestedQuestion;
-  }[];
+// ============================================================================
+// SHARED PROMPT PIECES
+// ============================================================================
+
+const AGENCY_CONTEXT = `L3ad Solutions is a Florida web design and digital marketing agency run by one person, Nathaniel. He builds websites that get local businesses more customers.`;
+
+const ANALYSIS_VOICE = `WRITING RULES (mandatory):
+- No em dashes or en dashes anywhere. Use commas, periods, colons or parentheses.
+- Plain language. No marketing filler (leverage, seamless, comprehensive, elevate, robust, holistic, cutting-edge).
+- Never invent facts. If something is not in the evidence, leave it out or say it was not found.
+- "prefill" text is shown to the client as a suggested answer to their own intake form, so write it the way the owner would say it about their own business ("We've served Titusville since 2004..."). Keep each prefill answer to 1-3 sentences.
+- "suggested_questions" are questions Nathaniel will ask the client in person, so write them in his voice: first person singular (I, my), conversational, specific to this business.
+- "description" is for Nathaniel's eyes: third person, factual, 1-2 sentences.
+- business_type is a short label of at most eight words, e.g. "independent optometry practice with optical shop".
+- Never put notes, caveats or instructions for Nathaniel inside prefill text or services; the client reads those fields. Put open questions in suggested_questions instead.`;
+
+// ============================================================================
+// STEP 1: OPUS 5 (Manager) - identify the business and draft the extraction plan
+// ============================================================================
+
+async function draftPlan(input: {
+  sourceUrl: string | null;
   notes: string;
-}
+  hints: { name: string; type: string; location: string };
+  pages: CrawledPage[];
+  discoveredLinks: DiscoveredLink[];
+}): Promise<{ plan: Plan; model: ModelId }> {
+  const linksText =
+    input.discoveredLinks.length > 0
+      ? `LINKS FOUND ON THE SITE:\n${input.discoveredLinks.map((l) => `- ${l.platform}: ${l.url}`).join("\n")}`
+      : "No social or directory links were found on the site.";
 
-interface FetchResult {
-  content: string;
-  discoveredLinks: { platform: string; url: string }[];
-}
+  const known = [
+    input.hints.name ? `KNOWN NAME: ${input.hints.name}` : "",
+    input.hints.type ? `KNOWN TYPE: ${input.hints.type}` : "",
+    input.hints.location ? `KNOWN LOCATION: ${input.hints.location}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-// ============================================================================
-// URL SECURITY
-// ============================================================================
-
-function validateUrl(url: string): void {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw new Error(`Invalid URL: ${url}`);
-  }
-
-  if (!["http:", "https:"].includes(parsed.protocol)) {
-    throw new Error(`Blocked protocol: ${parsed.protocol}`);
-  }
-
-  const hostname = parsed.hostname.toLowerCase();
-
-  const blocked = [
-    "localhost", "127.0.0.1", "0.0.0.0", "[::1]",
-    "metadata.google.internal", "169.254.169.254",
-  ];
-  if (blocked.includes(hostname)) {
-    throw new Error(`Blocked host: ${hostname}`);
-  }
-
-  const ipMatch = hostname.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
-  if (ipMatch) {
-    const [, a, b] = ipMatch.map(Number);
-    if (
-      a === 10 || a === 127 || a === 0 || a === 169 ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168)
-    ) {
-      throw new Error(`Blocked private IP: ${hostname}`);
-    }
-  }
-}
-
-// ============================================================================
-// LINK EXTRACTION
-// ============================================================================
-
-const SOCIAL_DOMAINS: Record<string, string> = {
-  "facebook.com": "Facebook",
-  "instagram.com": "Instagram",
-  "linkedin.com": "LinkedIn",
-  "twitter.com": "Twitter",
-  "x.com": "Twitter",
-  "youtube.com": "YouTube",
-  "tiktok.com": "TikTok",
-  "yelp.com": "Yelp",
-  "nextdoor.com": "Nextdoor",
-  "bbb.org": "BBB",
-  "homeadvisor.com": "HomeAdvisor",
-  "houzz.com": "Houzz",
-  "thumbtack.com": "Thumbtack",
-  "angieslist.com": "Angie's List",
-  "angi.com": "Angi",
-  "google.com": "Google Business",
-};
-
-/** Extract recognized social/business profile links from raw HTML */
-function extractLinksFromHtml(html: string, sourceHost: string): { platform: string; url: string }[] {
-  const linkRegex = /href=["']([^"']+)["']/gi;
-  const seen = new Set<string>();
-  const results: { platform: string; url: string }[] = [];
-
-  let match;
-  while ((match = linkRegex.exec(html)) !== null) {
-    const href = match[1];
-    let parsed: URL;
-    try {
-      parsed = new URL(href, `https://${sourceHost}`);
-    } catch {
-      continue;
-    }
-
-    if (!["http:", "https:"].includes(parsed.protocol)) continue;
-
-    const hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
-
-    // Skip same-site links
-    if (hostname === sourceHost.replace(/^www\./, "").toLowerCase()) continue;
-
-    // Check if this is a recognized social/business domain
-    let platform: string | null = null;
-    for (const [domain, name] of Object.entries(SOCIAL_DOMAINS)) {
-      if (hostname === domain || hostname.endsWith(`.${domain}`)) {
-        platform = name;
-        break;
-      }
-    }
-
-    if (!platform) continue;
-
-    // Deduplicate by full URL (strip trailing slash for consistency)
-    const normalized = parsed.href.replace(/\/$/, "");
-    if (seen.has(normalized)) continue;
-    seen.add(normalized);
-
-    results.push({ platform, url: parsed.href });
-  }
-
-  return results;
-}
-
-// ============================================================================
-// UTILITIES
-// ============================================================================
-
-async function fetchPageContent(url: string): Promise<FetchResult> {
-  try {
-    validateUrl(url);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    const res = await fetch(url, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; L3adBot/1.0; +https://l3adsolutions.com)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-    });
-
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      return { content: `[Failed to fetch: HTTP ${res.status}]`, discoveredLinks: [] };
-    }
-
-    const html = await res.text();
-
-    // Extract links from raw HTML before stripping tags
-    const sourceHost = new URL(url).hostname;
-    const discoveredLinks = extractLinksFromHtml(html, sourceHost);
-
-    const cleaned = html
-      .replace(/<script[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 8000);
-
-    return {
-      content: cleaned || "[Page loaded but no text content found]",
-      discoveredLinks,
-    };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    return { content: `[Failed to fetch: ${msg}]`, discoveredLinks: [] };
-  }
-}
-
-function parseJSON<T>(text: string): T {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("No JSON found in response");
-
-  let json = match[0];
-
-  // Clean common AI output issues before parsing:
-  // 1. Remove single-line JS comments (// ...) outside of quoted strings
-  json = json.replace(/"(?:[^"\\]|\\.)*"|\/\/[^\n]*/g, (m) =>
-    m.startsWith('"') ? m : ""
-  );
-  // 2. Remove trailing commas before } or ]
-  json = json.replace(/,\s*([\]}])/g, "$1");
-
-  try {
-    return JSON.parse(json) as T;
-  } catch (e) {
-    // Log the raw text for debugging, then rethrow
-    console.error("JSON parse failed. Raw model output (first 500 chars):", text.slice(0, 500));
-    throw e;
-  }
-}
-
-function getResponseText(response: Anthropic.Message): string {
-  return response.content[0].type === "text" ? response.content[0].text : "";
-}
-
-async function callModel(model: string, maxTokens: number, prompt: string): Promise<string> {
-  const response = await client.messages.create({
-    model,
-    max_tokens: maxTokens,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  if (response.stop_reason === "max_tokens") {
-    console.warn(`Model ${model} hit max_tokens (${maxTokens}) — output truncated, retrying with 2x`);
-    const retry = await client.messages.create({
+  const { result, model } = await withManagerFallback("plan", (model) =>
+    callStructured({
+      label: "plan",
       model,
-      max_tokens: maxTokens * 2,
-      messages: [{ role: "user", content: prompt }],
-    });
-    if (retry.stop_reason === "max_tokens") {
-      console.error(`Model ${model} still truncated at ${maxTokens * 2} tokens`);
-    }
-    return getResponseText(retry);
-  }
+      maxTokens: 6000,
+      effort: "low",
+      schema: PlanSchema,
+      prompt: `You are the senior strategist at L3ad Solutions. ${AGENCY_CONTEXT}
+A potential client's online presence was just crawled. Identify the business and tell the extraction team exactly what to look for.
 
-  return getResponseText(response);
-}
-
-// Try Opus, fall back to Sonnet if unavailable
-async function callManager(maxTokens: number, prompt: string): Promise<{ text: string; model: string }> {
-  try {
-    const text = await callModel(MODELS.quality, maxTokens, prompt);
-    return { text, model: MODELS.quality };
-  } catch {
-    const text = await callModel(MODELS.balanced, maxTokens, prompt);
-    return { text, model: MODELS.balanced };
-  }
-}
-
-// ============================================================================
-// STEP 1: OPUS (Manager) — Analyze the situation, draft extraction strategy
-// ============================================================================
-
-async function opusDraftPlan(
-  clientName: string,
-  businessType: string,
-  location: string,
-  pagesSummary: string
-): Promise<{ plan: OpusPlan; model: string }> {
-  const { text, model } = await callManager(1000, `You are the senior strategist at L3ad Solutions, a web design agency. A new client just came in and your team scraped their online presence. Before the junior analysts extract data, YOU need to tell them exactly what to look for.
-
-CLIENT: ${clientName}
-TYPE: ${businessType || "Unknown"}
-LOCATION: ${location || "Unknown"}
-
-PAGE CONTENT PREVIEW (first 2000 chars of each page):
-${pagesSummary}
-
-Based on what you can see, draft an extraction strategy. Return ONLY a JSON object:
-{
-  "business_category": "specific business category (e.g. 'residential screen enclosure contractor', not just 'contractor')",
-  "extraction_focus": ["the 5-8 most important things to extract for THIS type of business — be specific to the industry"],
-  "key_questions": ["3-5 questions we MUST answer from the data to build a good website for them"],
-  "look_for": ["specific details to hunt for: certifications, service area boundaries, pricing signals, team info, years in business, materials used, etc."],
-  "red_flags": ["things that seem off, inconsistent, or need verification"],
-  "strategy_notes": "2-3 sentences about how to position this business on their website — what angle to take, what to emphasize, what makes them compelling in their market"
-}
-
-Think like a strategist, not a data entry clerk. What matters for building THIS client a website that actually gets them customers?`);
-
-  return { plan: parseJSON<OpusPlan>(text), model };
-}
-
-// ============================================================================
-// STEP 1 (URL-first): OPUS — Discover business identity + draft strategy
-// ============================================================================
-
-async function opusDraftPlanFromUrl(
-  sourceUrl: string,
-  notes: string,
-  pagesSummary: string,
-  discoveredLinks: { platform: string; url: string }[]
-): Promise<{ plan: OpusPlanFromUrl; model: string }> {
-  const linksText = discoveredLinks.length > 0
-    ? `\nDISCOVERED LINKS FROM WEBSITE:\n${discoveredLinks.map(l => `- ${l.platform}: ${l.url}`).join("\n")}`
-    : "\nNo social/business links discovered on the website.";
-
-  const { text, model } = await callManager(1200, `You are the senior strategist at L3ad Solutions, a web design agency. A potential client's website URL was just submitted. Your job is to:
-1. IDENTIFY the business (name, location, type) from the page content
-2. Draft an extraction strategy for the team
-
-SOURCE URL: ${sourceUrl}
-${notes ? `ADMIN NOTES: ${notes}` : ""}
+${todayLine()}
+${input.sourceUrl ? `SOURCE URL: ${input.sourceUrl}` : ""}
+${known}
+${input.notes ? `ADMIN NOTES: ${input.notes}` : ""}
 ${linksText}
 
-PAGE CONTENT PREVIEW (first 2000 chars of each page):
-${pagesSummary}
+PAGE PREVIEWS (first 1500 characters of each page we could read):
+${renderPagesSummary(input.pages)}
 
-Return ONLY a JSON object:
-{
-  "discovered_name": "the actual business name found on the website",
-  "discovered_location": "city, state — best guess from content, addresses, service areas, phone area codes",
-  "business_category": "specific business category (e.g. 'residential screen enclosure contractor', not just 'contractor')",
-  "extraction_focus": ["the 5-8 most important things to extract for THIS type of business"],
-  "key_questions": ["3-5 questions we MUST answer from the data"],
-  "look_for": ["specific details to hunt for: certifications, service area, pricing signals, team info, years in business, etc."],
-  "red_flags": ["things that seem off, inconsistent, or need verification"],
-  "strategy_notes": "2-3 sentences about how to position this business"
-}
+Think like a strategist, not a data entry clerk. What matters for building THIS client a website that gets them customers? Name the business exactly as the site does (never a domain slug). Give the primary city and state.`,
+    })
+  );
 
-IMPORTANT: discovered_name should be the ACTUAL business name as it appears on the site (not a domain slug). If you can't find a clear name, use a cleaned-up version of the domain.
-discovered_location should be their primary location. Look for addresses, "serving X area", phone area codes, Google Maps embeds, etc.`);
-
-  return { plan: parseJSON<OpusPlanFromUrl>(text), model };
+  return { plan: result, model };
 }
 
 // ============================================================================
-// STEP 2: HAIKU (Worker) — Execute targeted extraction following Opus's plan
+// STEP 2a: HAIKU 4.5 (Worker) - targeted extraction following the plan
 // ============================================================================
 
-async function haikuExtract(
-  clientName: string,
-  businessType: string,
-  location: string,
-  pagesContext: string,
-  plan: OpusPlan
-): Promise<RawExtraction> {
-  const text = await callModel(MODELS.fast, 1500, `Extract business data from these web pages following the senior strategist's plan. Return ONLY a JSON object, no markdown.
+async function extractFacts(input: {
+  clientName: string;
+  location: string;
+  pagesContext: string;
+  plan: Plan;
+}): Promise<Extraction> {
+  return callStructured({
+    label: "extract",
+    model: MODELS.fast,
+    maxTokens: 8000,
+    schema: ExtractionSchema,
+    prompt: `Extract business data from these web pages following the senior strategist's plan.
 
-CLIENT: ${clientName} | TYPE: ${plan.business_category} | LOCATION: ${location || "Unknown"}
+${todayLine()}
+CLIENT: ${input.clientName} | TYPE: ${input.plan.business_category} | LOCATION: ${input.location || "Unknown"}
 
 STRATEGIST'S EXTRACTION PLAN:
-Focus on: ${plan.extraction_focus.join(", ")}
-Specifically look for: ${plan.look_for.join(", ")}
-Key questions to answer: ${plan.key_questions.join(", ")}
+Focus on: ${input.plan.extraction_focus.join(", ")}
+Specifically look for: ${input.plan.look_for.join(", ")}
+Key questions to answer: ${input.plan.key_questions.join(", ")}
 
-PAGES:
-${pagesContext}
+PAGES (pages marked failed or skipped had no readable content; do not guess what they contain):
+${input.pagesContext}
 
-Return this exact JSON structure:
-{
-  "business_name": "actual name found",
-  "business_type": "${plan.business_category}",
-  "location": "city, state",
-  "services": ["every service mentioned"],
-  "description": "1-2 sentence summary",
-  "tone": "2-3 word brand voice description",
-  "branding_clues": ["colors, logos, visual elements found"],
-  "review_highlights": ["quotes or themes from reviews"],
-  "strengths": ["what they do well"],
-  "raw_facts": ["every specific fact found — follow the strategist's look_for list above"],
-  "data_gaps": ["things from the extraction plan we couldn't find"],
-  "confidence": "low/medium/high based on how much content was available"
-}
-
-Follow the strategist's plan carefully. Extract EVERYTHING they asked for.`);
-
-  return parseJSON<RawExtraction>(text);
+Extract everything the plan asks for. Only record what the pages actually say. Put customer quotes in review_highlights only when they are real quotes or clearly stated themes; if there are none, leave it empty. List every named person with their role, every physical location, and every service or product line the site itself names.`,
+  });
 }
 
 // ============================================================================
-// STEP 2b: HAIKU (Worker) — Follow-up extraction when manager requests it
+// STEP 2b: OPUS 5 + web search - reviews, reputation, local competitors
 // ============================================================================
 
-async function haikuFollowUp(
-  instructions: string,
-  pagesContext: string,
-  extraction: RawExtraction
-): Promise<string> {
-  return await callModel(MODELS.fast, 800, `The senior strategist reviewed your extraction and found gaps. Re-read the pages and dig deeper.
+async function researchMarket(input: {
+  clientName: string;
+  category: string;
+  location: string;
+  sourceUrl: string | null;
+  notes: string;
+}): Promise<{ notes: string; searches: number; model: ModelId }> {
+  const { result, model } = await withManagerFallback("research", (model) =>
+    callWithWebSearch({
+      label: "research",
+      model,
+      maxTokens: 8000,
+      effort: "low",
+      maxSearches: 8,
+      timeoutMs: 120_000,
+      prompt: `You are researching a potential client for L3ad Solutions. ${AGENCY_CONTEXT}
 
-STRATEGIST'S INSTRUCTIONS: ${instructions}
+${todayLine()}
+BUSINESS: ${input.clientName}
+CATEGORY: ${input.category}
+LOCATION: ${input.location || "unknown"}
+${input.sourceUrl ? `WEBSITE: ${input.sourceUrl}` : ""}
+${input.notes ? `ADMIN NOTES: ${input.notes}` : ""}
+
+Use web search to find, in this order:
+1. Their Google Business Profile rating and review count (try "${input.clientName} ${input.location} reviews"). Also Yelp, Facebook or Healthgrades ratings if they surface.
+2. Four to six short real customer review snippets and the recurring themes, both praise and complaints.
+3. The three to five most visible local competitors for "${input.category} ${input.location}": business name, website, and rating with review count when shown.
+4. Anything notable: news, awards, ownership changes, additional locations, related brands, and whether a second location or sister brand is a separate business.
+
+Run each search once with a distinct query; a Yelp, Facebook, Healthgrades or directory rating counts when Google's is not shown.
+Write plain text notes under the headings REVIEWS, COMPETITORS, NOTABLE, SOURCES (list every URL you relied on). Quote numbers exactly as the source shows them and say "not found" where you could not find something. Never invent a rating, a count, or a business name. Keep it under 500 words.`,
+    })
+  );
+  return { notes: result.text, searches: result.searches, model };
+}
+
+// ============================================================================
+// STEP 2c: HAIKU 4.5 follow-up when the first pass was thin
+// ============================================================================
+
+async function followUpExtraction(input: {
+  gaps: string[];
+  pagesContext: string;
+  extraction: Extraction;
+}): Promise<string> {
+  const result = await callStructured({
+    label: "follow-up",
+    model: MODELS.fast,
+    maxTokens: 4000,
+    schema: ExtractionSchema.pick({ raw_facts: true, services: true, data_gaps: true }),
+    prompt: `The senior strategist reviewed your extraction and found gaps. Re-read the pages and dig deeper.
+
+${todayLine()}
+GAPS TO FILL: ${input.gaps.join("; ")}
 
 WHAT YOU ALREADY FOUND:
-${JSON.stringify({ services: extraction.services, strengths: extraction.strengths, raw_facts: extraction.raw_facts }, null, 2)}
+${JSON.stringify({ services: input.extraction.services, raw_facts: input.extraction.raw_facts }, null, 2)}
 
-ORIGINAL PAGES (re-read carefully):
-${pagesContext}
+PAGES (re-read carefully):
+${input.pagesContext}
 
-Look for: specific numbers, names, certifications, neighborhoods, pricing indicators, years of experience, team mentions, specialties buried in text.
+Return only NEW facts and services not already listed, and the gaps that still cannot be filled.`,
+  });
 
-Return a plain text summary of additional findings. If nothing new, say "No additional data found."`);
+  if (result.raw_facts.length === 0 && result.services.length === 0) return "";
+  return [
+    result.raw_facts.length ? `Additional facts:\n- ${result.raw_facts.join("\n- ")}` : "",
+    result.services.length ? `Additional services:\n- ${result.services.join("\n- ")}` : "",
+    result.data_gaps.length ? `Still missing: ${result.data_gaps.join("; ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 // ============================================================================
-// STEP 3: SONNET (Analyst) — Generate polished analysis with Opus's strategy
+// STEP 3: SONNET 5 (Analyst) - polished analysis, questions and prefill
 // ============================================================================
 
-async function sonnetGenerate(
-  clientName: string,
-  location: string,
-  extraction: RawExtraction,
-  plan: OpusPlan,
-  followUpData?: string
-): Promise<BusinessAnalysis> {
-  const followUpText = followUpData
-    ? `\nADDITIONAL DATA FROM FOLLOW-UP:\n${followUpData}`
-    : "";
+async function generateAnalysis(input: {
+  clientName: string;
+  location: string;
+  extraction: Extraction;
+  plan: Plan;
+  followUp: string;
+  research: string;
+}): Promise<AnalysisDraft> {
+  const shared = `${AGENCY_CONTEXT}
+The senior strategist reviewed the raw data and set the direction below.
 
-  const text = await callModel(MODELS.balanced, 2500, `Generate the final client analysis for L3ad Solutions. The senior strategist has already reviewed the raw data and provided strategic direction. Return ONLY a JSON object, no markdown.
-
-CLIENT: ${clientName} | TYPE: ${plan.business_category} | LOCATION: ${location || extraction.location}
+${todayLine()}
+CLIENT: ${input.clientName} | TYPE: ${input.plan.business_category} | LOCATION: ${input.location || input.extraction.location}
 
 STRATEGIST'S POSITIONING NOTES:
-${plan.strategy_notes}
+${input.plan.strategy_notes}
 
 RED FLAGS TO ADDRESS:
-${plan.red_flags.length > 0 ? plan.red_flags.join(", ") : "None identified"}
+${input.plan.red_flags.length > 0 ? input.plan.red_flags.join("; ") : "None identified"}
 
-RAW EXTRACTION:
-${JSON.stringify(extraction, null, 2)}
-${followUpText}
+RAW EXTRACTION FROM THEIR WEBSITE AND PROFILES:
+${JSON.stringify(input.extraction, null, 2)}
+${input.followUp ? `
+FOLLOW-UP FINDINGS:
+${input.followUp}` : ""}
 
-Return this exact JSON:
-{
-  "business_name": "${extraction.business_name}",
-  "business_type": "${plan.business_category}",
-  "location": "${extraction.location}",
-  "services": ${JSON.stringify(extraction.services)},
-  "description": "refined 1-2 sentence description incorporating the strategist's positioning",
-  "tone": "${extraction.tone}",
-  "branding_clues": ${JSON.stringify(extraction.branding_clues)},
-  "review_highlights": ${JSON.stringify(extraction.review_highlights)},
-  "strengths": ${JSON.stringify(extraction.strengths)},
-  "suggested_questions": [
-    {
-      "section": "your_story|services|your_customers|your_brand|content_media|website_features|goals",
-      "question": "conversational question specific to THIS business",
-      "why": "why this matters for their website"
-    }
-  ],
-  "prefill": {
-    "your_story": {
-      "differentiator": "what sets them apart based on real evidence"
-    },
-    "services": {
-      "main_services": ["confirmed services"],
-      "specialty": "their primary focus if clear",
-      "service_area": "specific area they serve"
-    },
-    "your_customers": {
-      "ideal_customer": "who they serve",
-      "how_they_find_you": ["channels they use"]
-    },
-    "content_media": {
-      "has_existing_website": true,
-      "existing_website_url": "their current site URL if found"
-    },
-    "goals": {
-      "competitor_url": "a competitor URL if found in the data"
-    }
-  }
-}
+WEB RESEARCH NOTES (reviews, reputation, competitors; may say "not found"):
+${input.research || "No web research available."}
 
-RULES FOR QUESTIONS:
-- Generate 5-8 questions across different sections
-- Use the strategist's key questions as starting points: ${plan.key_questions.join("; ")}
-- Questions must be conversational ("Tell us about..." not "Describe your...")
-- Questions must be SPECIFIC to their business — reference their actual services, location, or industry
-- Include questions that probe the data gaps: ${extraction.data_gaps.join(", ")}
-- Include at least one "your_brand" question about visual preferences (e.g. dark vs light website, what vibe they want)
-- Each question should help build a website that gets them more customers
+${ANALYSIS_VOICE}`;
 
-RULES FOR PREFILL:
-- Only prefill fields you are CONFIDENT about from the source data
-- For content_media.has_existing_website, set true only if you found an actual website URL
-- For goals.competitor_url, only include if a competitor was explicitly mentioned
-- Wrong prefill is worse than no prefill — when in doubt, leave it out`);
+  // Two smaller structured calls in parallel: the API rejects one schema this large.
+  const [core, guidance] = await Promise.all([
+    callStructured({
+      label: "generate core",
+      model: MODELS.balanced,
+      maxTokens: 12000,
+      effort: "medium",
+      schema: CoreAnalysisSchema,
+      prompt: `Produce the business profile part of the client analysis for L3ad Solutions. ${shared}
 
-  return parseJSON<BusinessAnalysis>(text);
+FIELD RULES:
+- business_name, business_type, location, founded, services, team, locations: carry over from the extraction, corrected only where the evidence clearly says otherwise. Do not add services that are not in the evidence.
+- description: 1-2 factual sentences for Nathaniel, third person, using the positioning notes.
+- review_highlights: real quotes or themes from the research notes or the site. Empty if none.
+- strengths: evidence only, not assumptions.
+- market: fill from the research notes only. google_rating and review_count refer to Google; if only Yelp or Facebook ratings were found, leave those two empty and put the platform ratings in review_themes (e.g. "Yelp: 4.5 stars from 16 reviews"). Competitors must be real businesses named in the research; copy their URLs and ratings exactly. notable must contain only facts the research or the site states, never inferences.`,
+    }),
+    callStructured({
+      label: "generate guidance",
+      model: MODELS.balanced,
+      maxTokens: 12000,
+      effort: "medium",
+      schema: GuidanceSchema,
+      prompt: `Produce the intake guidance part of the client analysis for L3ad Solutions. ${shared}
+
+FIELD RULES:
+- suggested_questions: 5-8 questions across different sections. Start from the strategist's key questions: ${input.plan.key_questions.join("; ")}. Probe the data gaps: ${input.extraction.data_gaps.join("; ") || "none"}. Include at least one your_brand question about visual direction (light or dark, vibe). Every question must reference something specific about this business.
+- prefill: only fields you are confident about from the evidence. Wrong prefill is worse than no prefill; use null when unsure. services.main_services must be a subset of the extracted services. goals.competitor_url only if a specific competitor site was named.`,
+    }),
+  ]);
+
+  return { ...core, ...guidance };
 }
 
 // ============================================================================
-// STEP 4: OPUS (Manager) — Final review, corrections, approval
+// STEP 4: OPUS 5 (Manager) - review and typed corrections
 // ============================================================================
 
-async function opusApprove(
-  clientName: string,
-  plan: OpusPlan,
-  extraction: RawExtraction,
-  analysis: BusinessAnalysis
-): Promise<{ approval: OpusApproval; model: string }> {
-  const { text, model } = await callManager(1500, `You are the senior strategist at L3ad Solutions doing final quality control. Your team extracted data and generated a client analysis. Before this goes to the agency owner, YOU must approve it.
+async function reviewAnalysis(input: {
+  clientName: string;
+  plan: Plan;
+  extraction: Extraction;
+  research: string;
+  draft: AnalysisDraft;
+}): Promise<{ approval: Approval; model: ModelId }> {
+  const { result, model } = await withManagerFallback("review", (model) =>
+    callStructured({
+      label: "review",
+      model,
+      maxTokens: 8000,
+      effort: "medium",
+      schema: ApprovalSchema,
+      prompt: `You are the senior strategist at L3ad Solutions doing final quality control before this analysis goes to Nathaniel, the agency owner.
 
-CLIENT: ${clientName} (${plan.business_category})
+${todayLine()}
+CLIENT: ${input.clientName} (${input.plan.business_category})
 
 YOUR ORIGINAL STRATEGY:
-${plan.strategy_notes}
-Key questions you wanted answered: ${plan.key_questions.join("; ")}
+${input.plan.strategy_notes}
+Key questions you wanted answered: ${input.plan.key_questions.join("; ")}
 
-RAW FACTS AVAILABLE:
-${JSON.stringify(extraction.raw_facts, null, 2)}
+RAW FACTS FROM THE SOURCES:
+${JSON.stringify({ raw_facts: input.extraction.raw_facts, services: input.extraction.services, team: input.extraction.team, locations: input.extraction.locations }, null, 2)}
 
-PROPOSED ANALYSIS TO SHOW THE OWNER:
-${JSON.stringify({
-  business_name: analysis.business_name,
-  business_type: analysis.business_type,
-  location: analysis.location,
-  description: analysis.description,
-  services: analysis.services,
-  tone: analysis.tone,
-  strengths: analysis.strengths,
-  suggested_questions: analysis.suggested_questions,
-  prefill: analysis.prefill,
-}, null, 2)}
+WEB RESEARCH NOTES:
+${input.research || "No web research available."}
 
-Review critically and return ONLY a JSON object:
-{
-  "approved": true/false,
-  "quality_score": "poor/fair/good/excellent",
-  "corrections": [
-    {"field": "which field", "current": "what it says now", "corrected": "what it should say"}
-  ],
-  "question_overrides": [
-    {"remove_index": 0, "add": null},
-    {"remove_index": null, "add": {"section": "services", "question": "better question", "why": "reason"}}
-  ],
-  "notes": "Brief notes for the agency owner about what we found, data quality, and anything they should ask the client directly. Be honest about gaps."
-}
+PROPOSED ANALYSIS:
+${JSON.stringify(input.draft, null, 2)}
 
 APPROVAL CRITERIA:
-- Business name, type, and location are accurate
-- Description honestly represents the business (no hallucinated claims)
-- Services listed are actually confirmed in the source data
-- Questions are specific and useful (not generic)
-- Prefill data is accurate — wrong prefill is worse than no prefill
-- The analysis is good enough that the owner can confidently preview it
+- Name, type, location and founding date are accurate.
+- The description honestly represents the business with no invented claims.
+- Every listed service is confirmed by the sources. Remove any that are not; add confirmed ones the draft missed.
+- Strengths are evidence, not assumptions. Do not assert something as a strength and also ask the client whether it is true.
+- market.notable and market.competitors contain only what the research or the site states; remove inferences and unverified claims with market_notable_to_remove and competitors_to_remove.
+- Prefill text contains no notes or caveats aimed at Nathaniel; fix with prefill_overrides.
+- review_highlights contains only real quotes or themes, never explanations of what could not be found.
+- Questions are specific and useful. Replace generic ones.
+- Prefill is accurate; wrong prefill is worse than no prefill.
+- No em dashes anywhere.
 
-Be strict. If something is wrong, correct it. If a question is generic garbage, remove it and add a better one. If the data is thin but honest, approve it with notes. Only reject if the analysis is misleading.`);
-
-  return { approval: parseJSON<OpusApproval>(text), model };
+Every correction must carry the exact final text, never an instruction or a comment. Approve honest but thin data with notes; reject only if the analysis is misleading. In notes, tell Nathaniel what was found, how good the data is, and what to ask the client directly.`,
+    })
+  );
+  return { approval: result, model };
 }
 
-// Apply Opus corrections to the analysis
-function applyCorrections(analysis: BusinessAnalysis, approval: OpusApproval): BusinessAnalysis {
-  const result = { ...analysis };
+/** Deterministic application of the reviewer's typed corrections. */
+function applyApproval(draft: AnalysisDraft, approval: Approval): AnalysisDraft {
+  const result: AnalysisDraft = JSON.parse(JSON.stringify(draft));
 
-  // Apply field corrections
-  for (const c of approval.corrections) {
-    const key = c.field as keyof BusinessAnalysis;
-    if (key in result && key !== "_meta" && key !== "suggested_questions" && key !== "prefill") {
-      (result as Record<string, unknown>)[key] = c.corrected;
-    }
+  for (const c of approval.field_corrections) {
+    const value = c.corrected.trim();
+    if (!value) continue;
+    result[c.field] = value;
   }
 
-  // Apply question overrides (removals first, then additions)
-  if (approval.question_overrides.length > 0) {
-    const toRemove = new Set<number>();
-    const toAdd: SuggestedQuestion[] = [];
-
-    for (const override of approval.question_overrides) {
-      if (override.remove_index != null) {
-        toRemove.add(override.remove_index);
-      }
-      if (override.add) {
-        toAdd.push(override.add);
-      }
-    }
-
-    result.suggested_questions = result.suggested_questions.filter(
-      (_, i) => !toRemove.has(i)
+  if (approval.services_to_remove.length > 0) {
+    result.services = result.services.filter((s) => !approval.services_to_remove.some((r) => sameText(r, s)));
+    result.prefill.services.main_services = result.prefill.services.main_services.filter(
+      (s) => !approval.services_to_remove.some((r) => sameText(r, s))
     );
-    result.suggested_questions.push(...toAdd);
+  }
+  for (const add of approval.services_to_add) {
+    if (add.trim() && !result.services.some((s) => sameText(s, add))) result.services.push(add.trim());
+  }
+
+  if (approval.strengths_to_remove.length > 0) {
+    result.strengths = result.strengths.filter((s) => !approval.strengths_to_remove.some((r) => sameText(r, s)));
+  }
+  if (approval.review_highlights_to_remove.length > 0) {
+    result.review_highlights = result.review_highlights.filter(
+      (s) => !approval.review_highlights_to_remove.some((r) => sameText(r, s))
+    );
+  }
+  if (approval.market_notable_to_remove.length > 0) {
+    result.market.notable = result.market.notable.filter(
+      (s) => !approval.market_notable_to_remove.some((r) => sameText(r, s))
+    );
+  }
+  if (approval.competitors_to_remove.length > 0) {
+    result.market.competitors = result.market.competitors.filter(
+      (c) => !approval.competitors_to_remove.some((r) => sameText(r, c.name))
+    );
+  }
+
+  if (approval.questions_to_remove.length > 0 || approval.questions_to_add.length > 0) {
+    const toRemove = new Set(approval.questions_to_remove);
+    result.suggested_questions = result.suggested_questions.filter((_, i) => !toRemove.has(i));
+    result.suggested_questions.push(...approval.questions_to_add);
+  }
+
+  for (const o of approval.prefill_overrides) {
+    const [section, field] = o.path.split(".") as [keyof AnalysisDraft["prefill"], string];
+    const target = result.prefill[section] as Record<string, unknown> | undefined;
+    if (!target || !(field in target)) continue;
+    if (o.action === "remove") target[field] = null;
+    else if (o.value && o.value.trim()) target[field] = o.value.trim();
   }
 
   return result;
 }
 
 // ============================================================================
-// MAIN PIPELINE: Opus Plan → Haiku Extract → Sonnet Generate → Opus Approve
-// (Legacy path — used when project has manually-entered social URLs)
+// CORE PIPELINE
 // ============================================================================
 
+interface PipelineInput {
+  sourceUrl: string | null;
+  notes: string;
+  hints: { name: string; type: string; location: string };
+  pages: CrawledPage[];
+  discoveredLinks: DiscoveredLink[];
+}
+
+async function runPipeline(input: PipelineInput): Promise<BusinessAnalysis> {
+  const started = Date.now();
+  const modelsUsed: string[] = [];
+  const pagesWithContent = input.pages.filter(pageHasContent).length;
+  const pagesContext = renderPagesContext(input.pages);
+
+  // STEP 1: plan + identify
+  const { plan, model: planModel } = await draftPlan(input);
+  modelsUsed.push(planModel);
+
+  const clientName = plan.discovered_name.trim() || input.hints.name || "Unknown Business";
+  const location = plan.discovered_location.trim() || input.hints.location || "";
+
+  // STEP 2: extraction and web research run side by side
+  const [extraction, research] = await Promise.all([
+    extractFacts({ clientName, location, pagesContext, plan }).then((e) => {
+      modelsUsed.push(MODELS.fast);
+      return e;
+    }),
+    researchMarket({
+      clientName,
+      category: plan.business_category,
+      location,
+      sourceUrl: input.sourceUrl,
+      notes: input.notes,
+    })
+      .then((r) => {
+        modelsUsed.push(r.model);
+        return r;
+      })
+      .catch((err) => {
+        console.warn(`[ai] research skipped: ${describeError(err)}`);
+        return { notes: "", searches: 0, model: null as ModelId | null };
+      }),
+  ]);
+
+  // STEP 2c: follow-up only when the first pass was thin
+  let followUp = "";
+  if (extraction.confidence === "low" && pagesWithContent > 0 && extraction.data_gaps.length > 0) {
+    try {
+      followUp = await followUpExtraction({ gaps: extraction.data_gaps, pagesContext, extraction });
+      if (followUp) modelsUsed.push(MODELS.fast);
+    } catch (err) {
+      console.warn(`[ai] follow-up skipped: ${describeError(err)}`);
+    }
+  }
+
+  // STEP 3: generate
+  const draft = await generateAnalysis({ clientName, location, extraction, plan, followUp, research: research.notes });
+  modelsUsed.push(MODELS.balanced);
+
+  // STEP 4: review
+  const { approval, model: reviewModel } = await reviewAnalysis({
+    clientName,
+    plan,
+    extraction,
+    research: research.notes,
+    draft,
+  });
+  modelsUsed.push(reviewModel);
+
+  const reviewed = applyApproval(draft, approval);
+
+  // Assemble the persisted shape. The existing-website fields come from the project, never the model.
+  const prefill: PrefillData = pruneEmpty({
+    your_story: { ...reviewed.prefill.your_story },
+    services: { ...reviewed.prefill.services },
+    your_customers: { ...reviewed.prefill.your_customers },
+    goals: { ...reviewed.prefill.goals },
+  }) as PrefillData;
+  prefill.your_story ??= {};
+  prefill.services ??= {};
+  prefill.your_customers ??= {};
+  if (input.sourceUrl) {
+    prefill.content_media = { has_existing_website: true, existing_website_url: input.sourceUrl };
+  }
+
+  const analysis: BusinessAnalysis = deepScrub({
+    business_name: reviewed.business_name,
+    business_type: reviewed.business_type,
+    location: reviewed.location,
+    founded: reviewed.founded || undefined,
+    services: reviewed.services,
+    team: reviewed.team.length ? reviewed.team : undefined,
+    locations: reviewed.locations.length ? reviewed.locations : undefined,
+    description: reviewed.description,
+    tone: reviewed.tone,
+    branding_clues: reviewed.branding_clues,
+    review_highlights: reviewed.review_highlights,
+    strengths: reviewed.strengths,
+    market: research.notes ? reviewed.market : undefined,
+    suggested_questions: reviewed.suggested_questions,
+    prefill,
+    discovered_social_urls: input.discoveredLinks,
+    _meta: {
+      models_used: modelsUsed,
+      pages_fetched: input.pages.length,
+      pages_with_content: pagesWithContent,
+      follow_up_performed: !!followUp,
+      research_performed: !!research.notes,
+      research_searches: research.searches,
+      quality_score: approval.quality_score,
+      approved: approval.approved,
+      approval_notes: approval.notes,
+      research_notes: research.notes ? research.notes.slice(0, 6000) : undefined,
+      sources: sourcesSummary(input.pages),
+      analyzed_at: new Date().toISOString(),
+      duration_seconds: Math.round((Date.now() - started) / 1000),
+    },
+  });
+
+  return analysis;
+}
+
+// ============================================================================
+// PUBLIC ENTRY POINTS
+// ============================================================================
+
+/** URL-first flow: crawl the site, discover profiles, research the market, analyze. */
+export async function analyzeFromUrl(sourceUrl: string, notes: string): Promise<BusinessAnalysis> {
+  const { pages, discoveredLinks } = await crawlSite(sourceUrl);
+  return runPipeline({
+    sourceUrl,
+    notes,
+    hints: { name: "", type: "", location: "" },
+    pages,
+    discoveredLinks,
+  });
+}
+
+/** Legacy flow: the admin entered the links by hand and we already know the name. */
 export async function analyzeBusinessLinks(
   clientName: string,
   businessType: string,
   location: string,
-  urls: { platform: string; url: string }[]
+  urls: DiscoveredLink[]
 ): Promise<BusinessAnalysis> {
-  // Fetch all URLs in parallel
-  const pageResults = await Promise.all(
-    urls.map(async (link) => {
-      const { content } = await fetchPageContent(link.url);
-      return { platform: link.platform, url: link.url, content };
-    })
-  );
-
-  const pagesContext = pageResults
-    .map((p) => `--- ${p.platform} (${p.url}) ---\n${p.content}`)
-    .join("\n\n");
-
-  const pagesWithContent = pageResults.filter(
-    (p) => !p.content.startsWith("[Failed") && !p.content.startsWith("[Page loaded but no")
-  ).length;
-
-  // Shorter summary for Opus planning (save tokens — Opus is $5/$25)
-  const pagesSummary = pageResults
-    .map((p) => `--- ${p.platform} ---\n${p.content.slice(0, 2000)}`)
-    .join("\n\n");
-
-  const modelsUsed: string[] = [];
-
-  // STEP 1: Opus (Manager) — Draft the extraction strategy
-  const { plan, model: planModel } = await opusDraftPlan(clientName, businessType, location, pagesSummary);
-  modelsUsed.push(planModel);
-
-  // STEP 2: Haiku (Worker) — Execute targeted extraction
-  const extraction = await haikuExtract(clientName, businessType, location, pagesContext, plan);
-  modelsUsed.push(MODELS.fast);
-
-  // STEP 2b (conditional): If extraction confidence is low + pages had content, do a follow-up
-  let followUpData: string | undefined;
-  if (extraction.confidence === "low" && pagesWithContent > 0 && extraction.data_gaps.length > 0) {
-    const followUp = await haikuFollowUp(
-      `Fill these gaps: ${extraction.data_gaps.join(", ")}. ${plan.extraction_focus.slice(0, 3).join(", ")}`,
-      pagesContext,
-      extraction
-    );
-    if (!followUp.includes("No additional data found")) {
-      followUpData = followUp;
-      modelsUsed.push(MODELS.fast);
-    }
-  }
-
-  // STEP 3: Sonnet (Analyst) — Generate polished analysis
-  const draft = await sonnetGenerate(clientName, location, extraction, plan, followUpData);
-  modelsUsed.push(MODELS.balanced);
-
-  // STEP 4: Opus (Manager) — Final review and approval
-  const { approval, model: approvalModel } = await opusApprove(clientName, plan, extraction, draft);
-  modelsUsed.push(approvalModel);
-
-  // Apply Opus corrections
-  const analysis = applyCorrections(draft, approval);
-
-  // Attach metadata
-  analysis._meta = {
-    models_used: modelsUsed,
-    pages_fetched: pageResults.length,
-    pages_with_content: pagesWithContent,
-    follow_up_performed: !!followUpData,
-    quality_score: approval.quality_score,
-    approved: approval.approved,
-    approval_notes: approval.notes,
-  };
-
-  return analysis;
-}
-
-// ============================================================================
-// URL-FIRST PIPELINE: Discover business from a single URL + notes
-// ============================================================================
-
-export async function analyzeFromUrl(
-  sourceUrl: string,
-  notes: string
-): Promise<BusinessAnalysis> {
-  // 1. Fetch the source URL and extract discovered links
-  const { content: sourceContent, discoveredLinks } = await fetchPageContent(sourceUrl);
-
-  // 2. Fetch up to 5 discovered links in parallel
-  const linksToFetch = discoveredLinks.slice(0, 5);
-  const linkedResults = await Promise.all(
-    linksToFetch.map(async (link) => {
-      const { content } = await fetchPageContent(link.url);
-      return { platform: link.platform, url: link.url, content };
-    })
-  );
-
-  // Combine source page + discovered pages
-  const allPages = [
-    { platform: "Website", url: sourceUrl, content: sourceContent },
-    ...linkedResults,
-  ];
-
-  const pagesContext = allPages
-    .map((p) => `--- ${p.platform} (${p.url}) ---\n${p.content}`)
-    .join("\n\n");
-
-  const pagesWithContent = allPages.filter(
-    (p) => !p.content.startsWith("[Failed") && !p.content.startsWith("[Page loaded but no")
-  ).length;
-
-  const pagesSummary = allPages
-    .map((p) => `--- ${p.platform} ---\n${p.content.slice(0, 2000)}`)
-    .join("\n\n");
-
-  const modelsUsed: string[] = [];
-
-  // STEP 1: Opus — Discover business identity + draft strategy
-  const { plan, model: planModel } = await opusDraftPlanFromUrl(
-    sourceUrl, notes, pagesSummary, discoveredLinks
-  );
-  modelsUsed.push(planModel);
-
-  const clientName = plan.discovered_name || "Unknown Business";
-  const location = plan.discovered_location || "";
-
-  // STEP 2: Haiku — Execute targeted extraction
-  const extraction = await haikuExtract(clientName, "", location, pagesContext, plan);
-  modelsUsed.push(MODELS.fast);
-
-  // STEP 2b: Follow-up if confidence is low
-  let followUpData: string | undefined;
-  if (extraction.confidence === "low" && pagesWithContent > 0 && extraction.data_gaps.length > 0) {
-    const followUp = await haikuFollowUp(
-      `Fill these gaps: ${extraction.data_gaps.join(", ")}. ${plan.extraction_focus.slice(0, 3).join(", ")}`,
-      pagesContext,
-      extraction
-    );
-    if (!followUp.includes("No additional data found")) {
-      followUpData = followUp;
-      modelsUsed.push(MODELS.fast);
-    }
-  }
-
-  // STEP 3: Sonnet — Generate polished analysis
-  const draft = await sonnetGenerate(clientName, location, extraction, plan, followUpData);
-  modelsUsed.push(MODELS.balanced);
-
-  // STEP 4: Opus — Final review and approval
-  const { approval, model: approvalModel } = await opusApprove(clientName, plan, extraction, draft);
-  modelsUsed.push(approvalModel);
-
-  // Apply corrections
-  const analysis = applyCorrections(draft, approval);
-
-  // Attach discovered social URLs for the caller to persist
-  analysis.discovered_social_urls = discoveredLinks;
-
-  // Attach metadata
-  analysis._meta = {
-    models_used: modelsUsed,
-    pages_fetched: allPages.length,
-    pages_with_content: pagesWithContent,
-    follow_up_performed: !!followUpData,
-    quality_score: approval.quality_score,
-    approved: approval.approved,
-    approval_notes: approval.notes,
-  };
-
-  return analysis;
-}
-
-// ============================================================================
-// PROPOSAL GENERATION PIPELINE
-// ============================================================================
-
-export interface ProposalProjectContext {
-  id: string;
-  client_name: string;
-  business_type: string | null;
-  location: string | null;
-  social_urls: { platform: string; url: string }[] | null;
-  ai_analysis: Record<string, unknown> | null;
-  intake_responses: { section_key: string; responses: Record<string, unknown> }[];
-}
-
-interface ProposalPlan {
-  positioning: string;
-  pain_points: string[];
-  recommended_services: string[];
-  pricing_strategy: string;
-  competitive_angle: string;
-  roi_narrative: string;
-}
-
-interface ProposalCorrections {
-  approved: boolean;
-  corrections: { path: string; issue: string; fix: string }[];
-  notes: string;
-}
-
-const L3AD_PRICING = `SERVICES & PRICING (use these real prices):
-- SEO: Starter $350/mo, Growth $700/mo
-- Web Design: Starter $1,500, Business $3,000 (one-time)
-- Digital Advertising: Starter $400/mo + ad spend, Growth $750/mo + ad spend
-- Google Business Profile: Setup $250 one-time, Starter $150/mo, Growth $300/mo
-- Social Media: Starter $350/mo (2 platforms), Growth $650/mo (3 platforms)
-- AI Automation: Starter $350 setup + $75/mo, Growth $750 setup + $150/mo
-- AI Search (GEO): Starter $350/mo, Growth $650/mo
-
-BUNDLES:
-- Get Found: $450/mo (SEO Starter + GBP Starter) + $250 GBP setup — saves $50/mo
-- Get Growing: $1,200/mo (SEO Growth + GBP Growth + Social Starter) + $250 GBP setup — saves $150/mo
-
-CUSTOM INTEGRATIONS:
-- Booking/Calendar Integration: $150 one-time setup + $20/mo (appointment scheduling, calendar sync)
-- Payment Gateway Integration: $150 one-time setup + $20/mo (invoicing, payment processing)
-
-AUDITS:
-- SEO Audit: $49, GBP Audit: $39, GEO Audit: $99`;
-
-function buildProjectSummary(project: ProposalProjectContext): string {
-  const parts: string[] = [];
-  parts.push(`Client: ${project.client_name}`);
-  if (project.business_type) parts.push(`Type: ${project.business_type}`);
-  if (project.location) parts.push(`Location: ${project.location}`);
-
-  if (project.ai_analysis) {
-    const ai = project.ai_analysis;
-    if (ai.description) parts.push(`Description: ${String(ai.description).slice(0, 300)}`);
-    if (ai.services) parts.push(`Services: ${JSON.stringify(ai.services).slice(0, 300)}`);
-    if (ai.strengths) parts.push(`Strengths: ${JSON.stringify(ai.strengths).slice(0, 300)}`);
-    if (ai.tone) parts.push(`Tone: ${String(ai.tone)}`);
-  }
-
-  return parts.join("\n").slice(0, 2000);
-}
-
-function buildFullContext(project: ProposalProjectContext | null, notes: string): string {
-  const parts: string[] = [];
-  parts.push(`ADMIN NOTES:\n${notes}`);
-
-  if (!project) return parts.join("\n\n");
-
-  parts.push(`CLIENT: ${project.client_name}`);
-  if (project.business_type) parts.push(`BUSINESS TYPE: ${project.business_type}`);
-  if (project.location) parts.push(`LOCATION: ${project.location}`);
-
-  if (project.social_urls && project.social_urls.length > 0) {
-    parts.push(`SOCIAL URLS:\n${project.social_urls.map(s => `- ${s.platform}: ${s.url}`).join("\n")}`);
-  }
-
-  if (project.ai_analysis) {
-    parts.push(`AI ANALYSIS:\n${JSON.stringify(project.ai_analysis, null, 2).slice(0, 4000)}`);
-  }
-
-  if (project.intake_responses.length > 0) {
-    const intakeText = project.intake_responses
-      .map(r => `[${r.section_key}]: ${JSON.stringify(r.responses)}`)
-      .join("\n");
-    parts.push(`INTAKE RESPONSES:\n${intakeText.slice(0, 3000)}`);
-  }
-
-  return parts.join("\n\n");
-}
-
-function applyProposalCorrections(
-  data: Record<string, unknown>,
-  corrections: ProposalCorrections
-): Record<string, unknown> {
-  const result = JSON.parse(JSON.stringify(data));
-
-  for (const c of corrections.corrections) {
-    const keys = c.path.split(".");
-    let obj = result;
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (obj && typeof obj === "object" && keys[i] in obj) {
-        obj = (obj as Record<string, unknown>)[keys[i]] as Record<string, unknown>;
-      } else {
-        obj = null as unknown as Record<string, unknown>;
-        break;
-      }
-    }
-    if (obj && typeof obj === "object") {
-      const lastKey = keys[keys.length - 1];
-      const currentValue = (obj as Record<string, unknown>)[lastKey];
-
-      let newValue: unknown;
-      try {
-        newValue = JSON.parse(c.fix);
-      } catch {
-        newValue = c.fix;
-      }
-
-      // Reject corrections that change the structural type
-      // The review step often replaces objects/arrays with instruction strings
-      if (currentValue !== undefined && currentValue !== null) {
-        const currentType = Array.isArray(currentValue) ? "array" : typeof currentValue;
-        const newType = Array.isArray(newValue) ? "array" : typeof newValue;
-        if (currentType !== newType) {
-          console.warn(`[proposal] Skipping correction at ${c.path}: type change ${currentType} → ${newType}`);
-          continue;
-        }
-        // Also reject replacing objects with strings (review step writes instructions as "fixes")
-        if (currentType === "object" && newType === "object" && typeof newValue === "string") {
-          console.warn(`[proposal] Skipping correction at ${c.path}: would replace object with string`);
-          continue;
-        }
-      }
-
-      (obj as Record<string, unknown>)[lastKey] = newValue;
-    }
-  }
-
-  return result;
-}
-
-const BRAND_VOICE_RULES = `
-WRITING VOICE (MANDATORY):
-- No em dashes. Use commas, periods, parentheses, or colons.
-- No AI words: leverage, actionable, seamless, comprehensive, dive into, delve, landscape, elevate, robust, streamline, game-changing, cutting-edge, unlock, empower, revolutionize, holistic, synergy, tailored, bespoke
-- No jargon clients wouldn't say out loud: lead generation, conversion-focused, omnichannel, KPIs
-- No exclamation points
-- No fake guarantees: guaranteed rankings, dominate Google, crush the competition
-- Write how a real person talks. Contractions preferred.
-- Direct, honest, peer-to-peer. Confident without being arrogant.
-- Short paragraphs. Lead with the point.
-- If a sentence sounds like a consultant wrote it, rewrite it.
-- FIRST PERSON SINGULAR ONLY: L3ad Solutions is a solo founder. Use "I", "I'm", "my", "me" instead of "we", "we're", "our", "us". Never use plural pronouns when referring to L3ad Solutions.`;
-
-const PROPOSAL_JSON_SCHEMA = `{
-  "title": {
-    "client_name": "Business Name",
-    "date": "Month Year",
-    "subtitle": "Short tagline"
-  },
-  "pain_points_heading": "Custom heading for pain points section",
-  "pain_points_subheading": "One sentence context line",
-  "pain_points": [
-    { "icon": "bi-icon-name", "title": "Pain Point Title", "description": "1-2 sentence description" }
-  ],
-  "why_new_website": {
-    "before": [{ "label": "Short Label", "description": "What they deal with now" }],
-    "after": [{ "label": "Short Label", "description": "How it improves" }]
-  },
-  "aida_strategy": {
-    "attention": { "title": "Section Title", "items": ["strategy item 1", "strategy item 2"] },
-    "interest": { "title": "Section Title", "items": ["item 1", "item 2"] },
-    "desire": { "title": "Section Title", "items": ["item 1", "item 2"] },
-    "action": { "title": "Section Title", "items": ["item 1", "item 2"] }
-  },
-  "itemized_pricing": {
-    "sections": [
-      {
-        "category": "Category Name",
-        "items": [{ "name": "Service Name", "description": "What it includes", "price": "$X,XXX" }],
-        "subtotal": "$X,XXX"
-      }
-    ]
-  },
-  "competitors": {
-    "entries": [
-      { "name": "Competitor Name", "website_score": "X/10", "seo_score": "description", "reviews": "count or description", "notes": "What they do well or poorly" }
-    ],
-    "unfair_advantage": "Honest, specific explanation of what I will do differently (no buzzwords, first person singular)"
-  },
-  "roi": {
-    "monthly_cost": "$X,XXX",
-    "revenue_per_customer": "$X,XXX",
-    "new_customers_per_month": "X",
-    "monthly_revenue": "$X,XXX",
-    "annual_revenue": "$XX,XXX",
-    "roi_percentage": "XXX%",
-    "cost_breakdown": [{ "label": "Service name", "amount": "$X/mo" }],
-    "revenue_model": [{ "label": "Metric description", "value": "number or amount" }],
-    "projections": [
-      { "month": "Month X", "clients": "X", "revenue": "$X,XXX", "cumulative": "$XX,XXX" }
-    ],
-    "callout": "2-3 short lines explaining the payoff in plain language (separate with newlines)"
-  },
-  "timeline": {
-    "phases": [
-      { "phase_number": 1, "title": "Phase Title", "duration": "realistic duration", "tasks": ["task 1", "task 2"] }
-    ]
-  },
-  "pricing_summary": {
-    "packages": [
-      { "label": "Option A: Name", "original_price": "$X,XXX", "price": "$X,XXX", "frequency": "/mo or one-time", "savings": "What they save", "highlighted": false },
-      { "label": "Option B: Name (Recommended)", "original_price": "$X,XXX", "price": "$X,XXX", "frequency": "/mo", "savings": "What they save", "highlighted": true }
-    ],
-    "personal_note": "A genuine, personal closing note. No corporate speak. Written like a real person talking to the client."
-  },
-  "next_steps": {
-    "steps": [
-      { "number": 1, "title": "Step Title", "description": "What to do, written conversationally" }
-    ],
-    "cta_text": "Contextual CTA (not generic 'Get Started Today')",
-    "cta_url": "https://l3adsolutions.com"
-  }
-}`;
-
-export async function generateProposal(
-  notes: string,
-  project: ProposalProjectContext | null
-): Promise<{ proposalData: Record<string, unknown>; clientName: string; industry: string | null }> {
-  const clientName = project?.client_name || "Prospective Client";
-  const industry = project?.business_type || null;
-
-  const now = new Date();
-  const currentDate = now.toLocaleString("en-US", { month: "long", year: "numeric" });
-
-  // STEP 1: Opus — Strategic planning
-  console.log("[proposal] Step 1: Opus strategic planning...");
-  const projectSummary = project ? buildProjectSummary(project) : "No linked project — using admin notes only.";
-
-  let plan: ProposalPlan;
-  try {
-    const { text: planText } = await callManager(1500, `You are the strategist at L3ad Solutions, a solo-founder web design and digital marketing agency. You are planning a proposal for a potential client. L3ad Solutions is run by one person (Nathaniel), so always use first person singular (I/my/me, never we/our/us).
-
-CLIENT CONTEXT:
-${projectSummary}
-
-ADMIN'S PROPOSAL NOTES:
-${notes}
-
-${L3AD_PRICING}
-
-Based on the client context and admin notes, create a strategic proposal plan. Return ONLY a JSON object:
-{
-  "positioning": "2-3 sentences on how to position L3ad Solutions as the ideal partner for this client (use I/my, not we/our)",
-  "pain_points": ["6 specific pain points this client likely faces — be industry-specific"],
-  "recommended_services": ["list the specific L3ad Solutions services/bundles to recommend based on their needs"],
-  "pricing_strategy": "which tier (Starter/Growth) and why, any bundles that make sense, total monthly estimate",
-  "competitive_angle": "how to differentiate from competitors in their market",
-  "roi_narrative": "realistic ROI story — what revenue increase can they expect and why"
-}
-
-Be specific to THIS client's industry and situation. Pick services that actually match their needs — don't recommend everything.`);
-    plan = parseJSON<ProposalPlan>(planText);
-  } catch (e) {
-    throw new Error(`Step 1 (Opus plan) failed: ${e instanceof Error ? e.message : e}`);
-  }
-
-  // STEP 2: Sonnet — Generate full proposal JSON
-  console.log("[proposal] Step 2: Sonnet generating proposal JSON...");
-  const fullContext = buildFullContext(project, notes);
-
-  let proposalData: Record<string, unknown>;
-  try {
-    const proposalText = await callModel(MODELS.balanced, 8000, `Generate a complete 10-slide business proposal for L3ad Solutions. Return ONLY a valid JSON object matching the exact schema below. No markdown, no comments, no explanation.
-
-${BRAND_VOICE_RULES}
-
-STRATEGIC PLAN FROM SENIOR STRATEGIST:
-${JSON.stringify(plan, null, 2)}
-
-FULL CLIENT CONTEXT:
-${fullContext}
-
-${L3AD_PRICING}
-
-REQUIRED JSON SCHEMA (follow EXACTLY):
-${PROPOSAL_JSON_SCHEMA}
-
-RULES:
-1. title.date = "${currentDate}", title.client_name = "${clientName}"
-2. pain_points: exactly 6 items, Bootstrap Icons (bi-*), specific to this client's industry
-3. pain_points_heading: custom heading for this client (not generic)
-4. pain_points_subheading: one honest sentence about their situation
-5. why_new_website: exactly 10 before + 10 after items
-6. aida_strategy: 4 sections, 3-5 items each
-7. itemized_pricing: use prices from the admin's notes if custom pricing was specified. Otherwise use L3ad catalog prices. Group by category with subtotals.
-8. competitors: 3-4 REAL competitors in their local market. Research based on their location and industry. Include honest assessments.
-9. roi: use industry-specific revenue estimates. cost_breakdown lists each service cost. revenue_model explains the math. projections show 6 months. callout has 2-3 plain-language lines about payoff. Numbers must be internally consistent.
-10. timeline: L3ad builds sites in 1-2 days. Discovery is 1-3 days. GBP/citations take 24-48 hours (up to 3 weeks for propagation). SEO launch is 1-2 weeks. Total project: 1-2 weeks to go live, then ongoing monthly work.
-11. pricing_summary: 1-3 packages as a clean comparison. Use original_price for standard rate, price for what they pay, savings for the difference. Mark recommended option as highlighted.
-12. next_steps: 3-5 steps. cta_text should be contextual (not generic "Get Started Today"). cta_url = "https://l3adsolutions.com"
-13. personal_note: genuine, written like a real person. Reference the client's specific situation. No corporate speak.
-14. All prices as "$X,XXX" strings. Be specific to THIS client throughout.
-15. FIRST PERSON SINGULAR: L3ad Solutions is a solo founder (Nathaniel). All copy must use "I", "I'm", "my", "me". Never use "we", "we're", "our", "us" when referring to L3ad Solutions.`);
-    proposalData = parseJSON<Record<string, unknown>>(proposalText);
-  } catch (e) {
-    throw new Error(`Step 2 (Sonnet generate) failed: ${e instanceof Error ? e.message : e}`);
-  }
-
-  // STEP 3: Sonnet — Quick review and corrections (Sonnet is faster than Opus here)
-  console.log("[proposal] Step 3: Sonnet reviewing proposal...");
-  try {
-    const reviewText = await callModel(MODELS.balanced, 1500, `You are the senior strategist at L3ad Solutions doing final quality control on a generated proposal before it goes to the admin. Review it critically.
-
-CLIENT: ${clientName}
-INDUSTRY: ${industry || "Unknown"}
-DATE: ${currentDate}
-
-PROPOSAL:
-${JSON.stringify(proposalData, null, 2).slice(0, 6000)}
-
-REAL PRICING CATALOG:
-${L3AD_PRICING}
-
-Review and return ONLY a JSON object:
-{
-  "approved": true/false,
-  "corrections": [
-    { "path": "dot.notation.path", "issue": "what's wrong", "fix": "corrected value (as JSON-parseable string if object/array, or plain string)" }
-  ],
-  "notes": "Brief review notes"
-}
-
-CHECK THESE SPECIFICALLY:
-1. Are all prices real L3ad Solutions prices from the catalog? Fix any made-up prices.
-2. Is the ROI math internally consistent? (monthly_revenue = revenue_per_customer × new_customers_per_month, etc.)
-3. Are pain points specific to the client's industry (not generic)?
-4. Does the timeline make sense for the recommended services?
-5. Are competitor entries realistic (not obviously fabricated)?
-6. Is title.date "${currentDate}" and title.client_name "${clientName}"?
-
-If prices don't match the catalog, correct them. If ROI math is wrong, fix the numbers. Be strict about accuracy.`);
-
-    const review = parseJSON<ProposalCorrections>(reviewText);
-    if (review.corrections.length > 0) {
-      proposalData = applyProposalCorrections(proposalData, review);
-    }
-  } catch (e) {
-    // Step 3 failure is non-fatal — use unreviewed proposal
-    console.warn(`[proposal] Step 3 (Opus review) failed, using unreviewed draft: ${e instanceof Error ? e.message : e}`);
-  }
-
-  console.log("[proposal] Pipeline complete.");
-  return { proposalData, clientName, industry };
+  const { pages } = await fetchLinkedPages(urls);
+  const website = urls.find((u) => u.platform === "Website")?.url ?? null;
+  return runPipeline({
+    sourceUrl: website,
+    notes: "",
+    hints: { name: clientName, type: businessType, location },
+    pages,
+    discoveredLinks: urls.filter((u) => u.platform !== "Website"),
+  });
 }

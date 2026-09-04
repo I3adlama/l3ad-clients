@@ -120,6 +120,20 @@ export interface AiPrefill {
   };
 }
 
+/** Friendly names for the model IDs recorded in ai_analysis._meta.models_used */
+export const MODEL_LABELS: Record<string, string> = {
+  "claude-opus-5": "Opus 5",
+  "claude-sonnet-5": "Sonnet 5",
+  "claude-haiku-4-5": "Haiku 4.5",
+  "claude-haiku-4-5-20251001": "Haiku 4.5",
+  "claude-opus-4-6": "Opus 4.6",
+  "claude-sonnet-4-6": "Sonnet 4.6",
+};
+
+export function modelLabel(id: string): string {
+  return MODEL_LABELS[id] || id.replace(/^claude-/, "");
+}
+
 export interface CreateProjectPayload {
   url: string;
   notes?: string;

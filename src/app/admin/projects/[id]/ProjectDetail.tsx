@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Project, IntakeResponses } from "@/lib/types";
-import { STEP_LABELS } from "@/lib/types";
+import { STEP_LABELS, modelLabel } from "@/lib/types";
 import type { BusinessAnalysis } from "@/lib/agent";
 import NoirPanel from "@/components/ui/NoirPanel";
 import BevelButton from "@/components/ui/BevelButton";
@@ -22,6 +22,18 @@ interface Props {
   projectId: string;
 }
 
+function Label({ children }: { children: React.ReactNode }) {
+  return <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">{children}</span>;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  ok: "text-green-400",
+  "meta-only": "text-accent",
+  empty: "text-yellow-400",
+  failed: "text-red-400",
+  skipped: "text-[var(--text-soft)]",
+};
+
 export default function ProjectDetail({ projectId }: Props) {
   const router = useRouter();
   const [project, setProject] = useState<ProjectData | null>(null);
@@ -30,6 +42,8 @@ export default function ProjectDetail({ projectId }: Props) {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [showSources, setShowSources] = useState(false);
+  const [showResearch, setShowResearch] = useState(false);
   const autoTriggered = useRef(false);
 
   const fetchProject = useCallback(async () => {
@@ -54,15 +68,21 @@ export default function ProjectDetail({ projectId }: Props) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        setAnalyzeError(data.error || "Analysis failed");
+        let message = "Analysis failed";
+        try {
+          const data = await res.json();
+          message = data.error || message;
+        } catch {
+          message = `Analysis failed (${res.status})`;
+        }
+        setAnalyzeError(message);
         return;
       }
 
-      // Re-fetch full project — server updates client_name, type, location, social_urls
+      // Re-fetch full project: the server updates client_name, type, location, social_urls
       await fetchProject();
     } catch {
-      setAnalyzeError("Something went wrong");
+      setAnalyzeError("Something went wrong. Check your connection and try again.");
     } finally {
       setAnalyzing(false);
     }
@@ -98,7 +118,7 @@ export default function ProjectDetail({ projectId }: Props) {
   const rawAnalysis = project.ai_analysis;
   const isUrlFirstProject = !!project.source_url;
 
-  // Safely coerce array fields — AI sometimes returns strings instead of arrays
+  // Safely coerce array fields; older analyses may hold strings where arrays are expected
   const analysis = rawAnalysis ? {
     ...rawAnalysis,
     services: Array.isArray(rawAnalysis.services) ? rawAnalysis.services : [],
@@ -106,7 +126,17 @@ export default function ProjectDetail({ projectId }: Props) {
     branding_clues: Array.isArray(rawAnalysis.branding_clues) ? rawAnalysis.branding_clues : [],
     review_highlights: Array.isArray(rawAnalysis.review_highlights) ? rawAnalysis.review_highlights : [],
     suggested_questions: Array.isArray(rawAnalysis.suggested_questions) ? rawAnalysis.suggested_questions : [],
+    team: Array.isArray(rawAnalysis.team) ? rawAnalysis.team : [],
+    locations: Array.isArray(rawAnalysis.locations) ? rawAnalysis.locations : [],
   } : null;
+
+  const market = analysis?.market;
+  const hasMarket =
+    !!market &&
+    (!!market.google_rating || !!market.review_count ||
+      (market.review_themes?.length ?? 0) > 0 ||
+      (market.competitors?.length ?? 0) > 0 ||
+      (market.notable?.length ?? 0) > 0);
 
   function copyLink() {
     navigator.clipboard.writeText(intakeUrl);
@@ -196,9 +226,7 @@ export default function ProjectDetail({ projectId }: Props) {
         {analyzing && (
           <div className="text-[var(--text-soft)] text-sm py-4 text-center">
             <div className="inline-block w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mr-2 align-middle" />
-            {isUrlFirstProject && !analysis
-              ? "Discovering business info and analyzing online presence..."
-              : "Fetching pages and analyzing with AI..."}
+            Crawling the site, researching reviews and competitors, then writing the analysis. This takes two to four minutes.
           </div>
         )}
 
@@ -207,33 +235,39 @@ export default function ProjectDetail({ projectId }: Props) {
             {/* Overview */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Business</span>
+                <Label>Business</Label>
                 <p className="text-white text-sm">{analysis.business_name}</p>
               </div>
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Type</span>
+                <Label>Type</Label>
                 <p className="text-white text-sm">{analysis.business_type}</p>
               </div>
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Location</span>
+                <Label>Location</Label>
                 <p className="text-white text-sm">{analysis.location}</p>
               </div>
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Tone</span>
+                <Label>Tone</Label>
                 <p className="text-white text-sm">{analysis.tone}</p>
               </div>
+              {analysis.founded && (
+                <div>
+                  <Label>Founded</Label>
+                  <p className="text-white text-sm">{analysis.founded}</p>
+                </div>
+              )}
             </div>
 
             {/* Description */}
             <div>
-              <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Description</span>
+              <Label>Description</Label>
               <p className="text-[var(--text-muted)] text-sm mt-1">{analysis.description}</p>
             </div>
 
             {/* Services */}
             {analysis.services.length > 0 && (
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Services Found</span>
+                <Label>Services Found</Label>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {analysis.services.map((s, i) => (
                     <span
@@ -247,10 +281,43 @@ export default function ProjectDetail({ projectId }: Props) {
               </div>
             )}
 
+            {/* Team + Locations */}
+            {(analysis.team.length > 0 || analysis.locations.length > 0) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {analysis.team.length > 0 && (
+                  <div>
+                    <Label>Team</Label>
+                    <ul className="text-sm text-[var(--text-muted)] mt-1 space-y-1">
+                      {analysis.team.map((m, i) => (
+                        <li key={i}>
+                          <span className="text-white">{m.name}</span>
+                          {m.role && <span className="text-[var(--text-soft)]"> · {m.role}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {analysis.locations.length > 0 && (
+                  <div>
+                    <Label>Locations</Label>
+                    <ul className="text-sm text-[var(--text-muted)] mt-1 space-y-1">
+                      {analysis.locations.map((l, i) => (
+                        <li key={i}>
+                          <span className="text-white">{l.name}</span>
+                          {l.address && <span className="block text-xs">{l.address}</span>}
+                          {l.phone && <span className="block text-xs">{l.phone}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Strengths */}
             {analysis.strengths.length > 0 && (
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Strengths</span>
+                <Label>Strengths</Label>
                 <ul className="text-sm text-[var(--text-muted)] mt-1 space-y-1">
                   {analysis.strengths.map((s, i) => (
                     <li key={i} className="flex gap-2">
@@ -262,10 +329,72 @@ export default function ProjectDetail({ projectId }: Props) {
               </div>
             )}
 
+            {/* Market research */}
+            {hasMarket && market && (
+              <div className="bg-noir-700 rounded p-3 border border-[var(--border)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Reputation &amp; Market</Label>
+                  {(market.google_rating || market.review_count) && (
+                    <span className="text-sm text-white">
+                      {market.google_rating && <span className="text-accent font-bold">{market.google_rating}★</span>}
+                      {market.review_count && <span className="text-[var(--text-soft)]"> · {market.review_count} reviews</span>}
+                    </span>
+                  )}
+                </div>
+
+                {market.review_themes.length > 0 && (
+                  <div>
+                    <span className="text-[var(--text-soft)] text-xs">What customers say</span>
+                    <ul className="text-sm text-[var(--text-muted)] mt-1 space-y-1">
+                      {market.review_themes.map((t, i) => (
+                        <li key={i}>• {t}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {market.competitors.length > 0 && (
+                  <div>
+                    <span className="text-[var(--text-soft)] text-xs">Local competitors</span>
+                    <div className="mt-1 space-y-1.5">
+                      {market.competitors.map((c, i) => (
+                        <div key={i} className="text-sm">
+                          <span className="text-white">{c.name}</span>
+                          {c.rating && <span className="text-[var(--text-soft)]"> · {c.rating}</span>}
+                          {c.url && (
+                            <a
+                              href={c.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-accent hover:text-accent-bright text-xs ml-2"
+                            >
+                              site
+                            </a>
+                          )}
+                          {c.notes && <p className="text-[var(--text-muted)] text-xs">{c.notes}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {market.notable.length > 0 && (
+                  <div>
+                    <span className="text-[var(--text-soft)] text-xs">Worth knowing</span>
+                    <ul className="text-sm text-[var(--text-muted)] mt-1 space-y-1">
+                      {market.notable.map((n, i) => (
+                        <li key={i}>• {n}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Branding Clues */}
             {analysis.branding_clues.length > 0 && (
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Branding Clues</span>
+                <Label>Branding Clues</Label>
                 <ul className="text-sm text-[var(--text-muted)] mt-1 space-y-1">
                   {analysis.branding_clues.map((c, i) => (
                     <li key={i}>• {c}</li>
@@ -277,7 +406,7 @@ export default function ProjectDetail({ projectId }: Props) {
             {/* Review Highlights */}
             {analysis.review_highlights.length > 0 && (
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Review Highlights</span>
+                <Label>Review Highlights</Label>
                 <ul className="text-sm text-[var(--text-muted)] mt-1 space-y-1">
                   {analysis.review_highlights.map((r, i) => (
                     <li key={i} className="italic">&ldquo;{r}&rdquo;</li>
@@ -289,9 +418,7 @@ export default function ProjectDetail({ projectId }: Props) {
             {/* Suggested Questions */}
             {analysis.suggested_questions.length > 0 && (
               <div>
-                <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">
-                  Suggested Questions for Intake
-                </span>
+                <Label>Questions to ask the client</Label>
                 <div className="space-y-2 mt-2">
                   {analysis.suggested_questions.map((q, i) => (
                     <div
@@ -300,7 +427,7 @@ export default function ProjectDetail({ projectId }: Props) {
                     >
                       <p className="text-white text-sm font-bold">{q.question}</p>
                       <p className="text-[var(--text-soft)] text-xs mt-1">
-                        <span className="text-accent">{q.section}</span> — {q.why}
+                        <span className="text-accent">{q.section}</span> · {q.why}
                       </p>
                     </div>
                   ))}
@@ -311,7 +438,6 @@ export default function ProjectDetail({ projectId }: Props) {
             {/* Pipeline Meta */}
             {analysis._meta && (
               <div className="border-t border-[var(--border)] pt-3 space-y-2">
-                {/* Approval Status */}
                 <div className={`flex items-center gap-2 px-3 py-2 rounded text-sm ${
                   analysis._meta.approved
                     ? "bg-green-400/10 border border-green-400/30"
@@ -320,14 +446,13 @@ export default function ProjectDetail({ projectId }: Props) {
                   <span className={analysis._meta.approved ? "text-green-400" : "text-yellow-400"}>
                     {analysis._meta.approved ? "Approved" : "Needs Review"}
                   </span>
-                  <span className="text-[var(--text-soft)]">by Opus</span>
+                  <span className="text-[var(--text-soft)]">by the reviewer</span>
                 </div>
 
-                {/* Approval Notes */}
                 {analysis._meta.approval_notes && (
                   <div className="bg-noir-700 rounded p-3 border border-[var(--border)]">
-                    <span className="text-[var(--text-soft)] text-xs uppercase tracking-wider">Strategist Notes</span>
-                    <p className="text-[var(--text-muted)] text-sm mt-1">{analysis._meta.approval_notes}</p>
+                    <Label>Strategist Notes</Label>
+                    <p className="text-[var(--text-muted)] text-sm mt-1 whitespace-pre-wrap">{analysis._meta.approval_notes}</p>
                   </div>
                 )}
 
@@ -341,17 +466,79 @@ export default function ProjectDetail({ projectId }: Props) {
                     }>{analysis._meta.quality_score}</span>
                   </span>
                   <span className="text-[var(--text-soft)] text-xs">
-                    Pages: {analysis._meta.pages_with_content}/{analysis._meta.pages_fetched} with content
+                    Pages: {analysis._meta.pages_with_content}/{analysis._meta.pages_fetched} readable
                   </span>
+                  {analysis._meta.research_performed && (
+                    <span className="text-xs text-accent">
+                      Web research: {analysis._meta.research_searches} searches
+                    </span>
+                  )}
                   {analysis._meta.follow_up_performed && (
                     <span className="text-xs text-yellow-400">Follow-up performed</span>
                   )}
+                  {analysis._meta.duration_seconds > 0 && (
+                    <span className="text-[var(--text-soft)] text-xs">
+                      {Math.round(analysis._meta.duration_seconds / 60 * 10) / 10} min
+                    </span>
+                  )}
                 </div>
                 <p className="text-[var(--text-soft)] text-xs">
-                  Pipeline: {analysis._meta.models_used.map(m => m.split("-").slice(1, 3).join("-")).join(" → ")}
+                  Pipeline: {analysis._meta.models_used.map(modelLabel).join(" → ")}
+                  {analysis._meta.analyzed_at && (
+                    <> · {new Date(analysis._meta.analyzed_at).toLocaleString()}</>
+                  )}
                 </p>
+
+                {analysis._meta.research_notes && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowResearch((s) => !s)}
+                      className="text-xs text-accent hover:text-accent-bright"
+                    >
+                      {showResearch ? "Hide" : "Show"} raw research notes
+                    </button>
+                    {showResearch && (
+                      <pre className="mt-2 text-xs text-[var(--text-muted)] whitespace-pre-wrap font-sans bg-noir-700 rounded p-3 border border-[var(--border)]">
+                        {analysis._meta.research_notes}
+                      </pre>
+                    )}
+                  </div>
+                )}
+
+                {analysis._meta.sources?.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowSources((s) => !s)}
+                      className="text-xs text-accent hover:text-accent-bright"
+                    >
+                      {showSources ? "Hide" : "Show"} sources read ({analysis._meta.sources.length})
+                    </button>
+                    {showSources && (
+                      <ul className="mt-2 space-y-1">
+                        {analysis._meta.sources.map((s, i) => (
+                          <li key={i} className="text-xs flex gap-2 items-baseline">
+                            <span className={`w-16 shrink-0 ${STATUS_COLORS[s.status] || ""}`}>{s.status}</span>
+                            <a
+                              href={s.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[var(--text-muted)] hover:text-accent truncate"
+                              title={s.url}
+                            >
+                              {s.label}
+                            </a>
+                            {s.note && <span className="text-[var(--text-soft)] shrink-0">{s.note}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-[var(--text-soft)] text-xs">
-                  Intake form pre-filled with discovered info. Client can review and update.
+                  Intake form pre-filled with discovered info. The client can review and update.
                 </p>
               </div>
             )}
@@ -362,7 +549,7 @@ export default function ProjectDetail({ projectId }: Props) {
           <p className="text-[var(--text-soft)] text-sm">
             {isUrlFirstProject
               ? "Analysis will start automatically..."
-              : "Click \u201cAnalyze Links\u201d to have AI scan the client\u2019s online presence and pre-fill their intake form."}
+              : "Click “Analyze Links” to have AI scan the client’s online presence and pre-fill their intake form."}
           </p>
         )}
       </NoirPanel>
@@ -412,7 +599,7 @@ export default function ProjectDetail({ projectId }: Props) {
           </p>
         ) : project.current_step > 0 ? (
           <p className="text-yellow-400 text-sm">
-            In progress — on step {project.current_step + 1} ({STEP_LABELS[project.current_step]})
+            In progress, last saved on step {project.current_step + 1} ({STEP_LABELS[project.current_step]})
           </p>
         ) : (
           <p className="text-[var(--text-soft)] text-sm">
@@ -422,7 +609,7 @@ export default function ProjectDetail({ projectId }: Props) {
       </NoirPanel>
 
       {/* Response Brief */}
-      {project.intake_completed && project.responses && (
+      {project.responses && (project.intake_completed || project.current_step > 0) && (
         <ResponseBrief responses={project.responses} />
       )}
     </div>
