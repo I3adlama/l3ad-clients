@@ -18,7 +18,7 @@ export default function SectionWrapper({
         )}
       </div>
 
-      <div className="space-y-5">{children}</div>
+      <div className="form-questions">{children}</div>
     </div>
   );
 }

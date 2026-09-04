@@ -407,6 +407,32 @@
 .comic-card--form .input-field:focus { border-color: var(--form-accent); }
 .comic-card--form .input-label { color: #111111; font-size: 1rem; }
 
+/* One rounded card per question inside a section */
+.form-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.form-questions > .space-y-5 { display: contents; }
+.form-questions > .space-y-5 > * { margin: 0; }
+.comic-card--form .form-questions > *:not(p):not(.rounded-md),
+.comic-card--form .form-questions > .space-y-5 > *:not(p):not(.rounded-md) {
+  background: #ffffff;
+  border: 1.5px solid rgba(0, 0, 0, 0.16);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.comic-card--form .form-questions > .rounded-md,
+.comic-card--form .form-questions > .space-y-5 > .rounded-md {
+  padding: 16px 18px;
+}
+@media (max-width: 640px) {
+  .comic-card--form .form-questions > *:not(p):not(.rounded-md),
+  .comic-card--form .form-questions > .space-y-5 > *:not(p):not(.rounded-md) {
+    padding: 14px 14px;
+  }
+}
+
 /* Larger type for readability on the light panels */
 .comic-card--form .text-sm { font-size: 1rem; line-height: 1.55; }
 .comic-card--form .text-xs { font-size: 0.875rem; line-height: 1.5; }
