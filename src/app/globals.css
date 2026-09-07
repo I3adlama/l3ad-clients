@@ -25,6 +25,7 @@
 @import "../styles/comic-card.css";
 @import "../styles/nav-btn.css";
 @import "../styles/proposal.css";
+@import "../styles/proposal-motion.css";
 
 @theme {
   --font-display: 'TreasureTimes', Georgia, serif;

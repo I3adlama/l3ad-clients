@@ -14,9 +14,9 @@ export default function PainPointsSlide({ data }: { data: ProposalData }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {data.pain_points.map((pain, i) => (
-          <div key={i} className={`scroll-fade-up delay-${Math.min(i + 1, 5)} pain-card`}>
+          <div key={i} className={`scroll-fade-up delay-${Math.min(i + 1, 5)} pain-card ${i % 2 === 0 ? "pain-card--from-left" : "pain-card--from-right"}`}>
             <div className="flex items-center gap-2.5 mb-2">
-              <i className={`${pain.icon} text-[#ef4444] text-base`} />
+              <i className={`${pain.icon} text-[#ef4444] text-base pain-card__icon`} />
               <span className="pain-card__title">{pain.title}</span>
             </div>
             <p className="pain-card__desc">{pain.description}</p>

@@ -22,7 +22,7 @@ export default function NextStepsSlide({ data }: { data: ProposalData }) {
       <div className="max-w-2xl mx-auto mt-8 text-left">
         {data.next_steps.steps.map((step, i) => (
           <div key={step.number} className={`scroll-fade-up delay-${Math.min(i + 2, 5)} next-step`}>
-            <div className="next-step__circle">{step.number}</div>
+            <div className="next-step__circle" style={{ animationDelay: `${0.3 + i * 0.25}s` }}><span className="next-step__ring" aria-hidden />{step.number}</div>
             <div>
               <div className="next-step__title">{step.title}</div>
               <div className="next-step__desc">{step.description}</div>

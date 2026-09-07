@@ -6,8 +6,11 @@ import TitleSlide from "./slides/TitleSlide";
 import PainPointsSlide from "./slides/PainPointsSlide";
 import WhyNewWebsiteSlide from "./slides/WhyNewWebsiteSlide";
 import AidaStrategySlide from "./slides/AidaStrategySlide";
-import ItemizedPricingSlide from "./slides/ItemizedPricingSlide";
 import CompetitorsSlide from "./slides/CompetitorsSlide";
+import CaseStudiesSlide from "./slides/CaseStudiesSlide";
+import RoadmapSlide from "./slides/RoadmapSlide";
+import WhatWeNeedSlide from "./slides/WhatWeNeedSlide";
+import ItemizedPricingSlide from "./slides/ItemizedPricingSlide";
 import RoiSlide from "./slides/RoiSlide";
 import TimelineSlide from "./slides/TimelineSlide";
 import PricingSummarySlide from "./slides/PricingSummarySlide";
@@ -41,16 +44,20 @@ export default function ProposalViewer({ data }: ProposalViewerProps) {
     return () => observer.disconnect();
   }, []);
 
+  const hasRoadmap = Boolean(data.roadmap && data.roadmap.phases.length > 0);
+
   return (
     <div ref={containerRef}>
       <TitleSlide data={data} />
       <PainPointsSlide data={data} />
       <WhyNewWebsiteSlide data={data} />
       <AidaStrategySlide data={data} />
-      <ItemizedPricingSlide data={data} />
       <CompetitorsSlide data={data} />
+      <CaseStudiesSlide data={data} />
+      {hasRoadmap ? <RoadmapSlide data={data} /> : <TimelineSlide data={data} />}
+      <WhatWeNeedSlide data={data} />
+      <ItemizedPricingSlide data={data} />
       <RoiSlide data={data} />
-      <TimelineSlide data={data} />
       <PricingSummarySlide data={data} />
       <NextStepsSlide data={data} />
 

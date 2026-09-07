@@ -63,7 +63,7 @@ export default function PricingSummarySlide({ data }: { data: ProposalData }) {
                 <td
                   key={i}
                   className={`py-3 px-4 text-center font-display text-lg ${
-                    pkg.highlighted ? "text-[var(--accent)]" : "text-white"
+                    pkg.highlighted ? "text-[var(--accent)] price-glow" : "text-white"
                   }`}
                 >
                   {pkg.price}
@@ -105,7 +105,7 @@ export default function PricingSummarySlide({ data }: { data: ProposalData }) {
             </p>
           ))}
           <p className="personal-note__author">
-            &mdash; Nathaniel, L3ad Solutions LLC
+            Nathaniel, L3ad Solutions LLC
           </p>
         </div>
       )}

@@ -248,8 +248,54 @@ export interface ProposalData {
       seo_score?: string;
       reviews?: string;
       notes?: string;
+      /** Optional labelled metrics; when present they replace the default Keywords/Traffic/Backlinks rows */
+      metrics?: { label: string; value: string }[];
     }[];
     unfair_advantage: string;
+  };
+
+  /** Optional: Proof slide. Case studies and testimonials from other L3ad clients */
+  case_studies?: {
+    heading?: string;
+    subheading?: string;
+    entries: {
+      client: string;
+      industry: string;
+      summary: string;
+      stats: { value: string; label: string }[];
+      quote?: string;
+      quote_author?: string;
+    }[];
+  };
+
+  /** Optional: 90-day roadmap with KPIs. When present it replaces the Timeline slide */
+  roadmap?: {
+    heading?: string;
+    subheading?: string;
+    phases: {
+      label: string;
+      days: string;
+      goal: string;
+      deliverables: string[];
+    }[];
+    kpis: {
+      metric: string;
+      baseline: string;
+      target: string;
+      tracked_by?: string;
+    }[];
+    footnote?: string;
+  };
+
+  /** Optional: What I need from you slide */
+  what_we_need?: {
+    heading?: string;
+    subheading?: string;
+    items: { icon?: string; title: string; detail: string }[];
+    time_commitment?: {
+      title: string;
+      phases: { period: string; cadence: string; detail: string }[];
+    };
   };
 
   /** Slide 7: ROI */
