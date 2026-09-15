@@ -213,8 +213,13 @@ export interface ProposalData {
   pain_points_heading?: string;
   pain_points_subheading?: string;
 
-  /** Slide 3: Why New Website */
+  /** Slide 3: Why New Website (or any before/after comparison) */
   why_new_website: {
+    /** Optional overrides for clients who are not getting a new site */
+    heading?: string;
+    subheading?: string;
+    before_label?: string;
+    after_label?: string;
     before: { label: string; description: string }[];
     after: { label: string; description: string }[];
   };

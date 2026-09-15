@@ -1,17 +1,19 @@
 import type { ProposalData } from "@/lib/types";
 
 export default function WhyNewWebsiteSlide({ data }: { data: ProposalData }) {
+  const w = data.why_new_website;
   return (
     <section className="proposal-section">
-      <h1 className="scroll-fade-up section-heading">WHY YOU NEED A NEW WEBSITE</h1>
+      <h1 className="scroll-fade-up section-heading">{w.heading || "WHY YOU NEED A NEW WEBSITE"}</h1>
       <p className="scroll-fade-up delay-1 section-subheading">
-        Your current site looks good. It just isn&apos;t built for the buyer who signs the check. Here&apos;s what the rebuild changes:
+        {w.subheading ||
+          "Your current site looks good. It just isn't built for the buyer who signs the check. Here's what the rebuild changes:"}
       </p>
 
       <div className="flex flex-col lg:flex-row gap-6 items-stretch">
         {/* Before column */}
         <div className="scroll-fade-up delay-2 comparison-col comparison-col--before bg-[var(--bg-elevated)]">
-          <div className="comparison-col__header text-[#ef4444]">CURRENT SITE</div>
+          <div className="comparison-col__header text-[#ef4444]">{w.before_label || "CURRENT SITE"}</div>
           {data.why_new_website.before.map((item, i) => (
             <div key={i} className="comparison-item comparison-item--before" style={{ animationDelay: `${0.2 + i * 0.1}s` }}>
               <i className="bi-x-lg text-[#ef4444] text-sm mt-1 flex-shrink-0" />
@@ -30,7 +32,7 @@ export default function WhyNewWebsiteSlide({ data }: { data: ProposalData }) {
 
         {/* After column */}
         <div className="scroll-fade-up delay-3 comparison-col comparison-col--after bg-[var(--bg-elevated)]">
-          <div className="comparison-col__header text-[var(--accent)]">NEW SITE I BUILD</div>
+          <div className="comparison-col__header text-[var(--accent)]">{w.after_label || "NEW SITE I BUILD"}</div>
           {data.why_new_website.after.map((item, i) => (
             <div key={i} className="comparison-item comparison-item--after" style={{ animationDelay: `${0.4 + i * 0.1}s` }}>
               <i className="bi-check-circle-fill text-[var(--accent)] text-sm mt-1 flex-shrink-0" />
