@@ -36,8 +36,10 @@ function format(p: Parsed, n: number): string {
 /**
  * Animates the leading number in a stat string ("158", "+33%", "$1,500/mo", "4.28")
  * from 0 to its value when the element scrolls into view. Non-numeric strings
- * (like "Page 1" or "#1") render as-is. Starts at zero on both server and client
- * so hydration matches; reduced-motion users jump straight to the final value.
+ * (like "Page 1" or "#1") render as-is. The server render and first client
+ * paint show the real value, so crawlers, link previews, and anyone without
+ * JS see "158", not "0". The count-up only starts once the element is in view;
+ * reduced-motion users keep the final value.
  */
 export default function CountUp({
   value,
@@ -49,10 +51,7 @@ export default function CountUp({
   className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [display, setDisplay] = useState(() => {
-    const p = parse(value);
-    return p ? format(p, 0) : value;
-  });
+  const [display, setDisplay] = useState(value);
 
   useEffect(() => {
     const p = parse(value);
@@ -63,10 +62,7 @@ export default function CountUp({
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const run = () => {
-      if (reduce) {
-        raf = requestAnimationFrame(() => setDisplay(format(p, p.target)));
-        return;
-      }
+      if (reduce) return;
       const start = performance.now();
       const tick = (now: number) => {
         const t = Math.min(1, Math.max(0, (now - start) / duration));
