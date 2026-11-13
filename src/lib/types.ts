@@ -356,6 +356,73 @@ export interface ProposalData {
     cta_text?: string;
     cta_url?: string;
   };
+
+  /** Optional: the animated "story" layout. When present it replaces the slide deck. */
+  story?: StoryData;
+}
+
+export type StoryVisual = "website" | "profile" | "ads" | "seo" | "ai";
+
+export interface StoryData {
+  greeting_name: string;
+  client_logo?: string;
+  headline: string;
+  sub: string;
+  date: string;
+  facts_heading: string;
+  facts: {
+    value: number;
+    prefix?: string;
+    suffix?: string;
+    label: string;
+    body: string;
+    chips?: { value: string; label: string }[];
+  }[];
+  facts_close: { title: string; body: string };
+  services_heading: string;
+  services_sub: string;
+  services: {
+    visual: StoryVisual;
+    name: string;
+    tag: string;
+    one_liner: string;
+    get: string[];
+    need: string;
+    works: string;
+    expect: string;
+  }[];
+  loop: { heading: string; body: string; steps: string[] };
+  timeline_heading: string;
+  timeline: { when: string; title: string; points: string[] }[];
+  timeline_note: string;
+  proof_heading: string;
+  proof: {
+    client: string;
+    industry: string;
+    stats: { value: string; label: string }[];
+    quote?: string;
+    author?: string;
+  }[];
+  investment: {
+    heading: string;
+    sub: string;
+    one_time: { label: string; price: string; was?: string; note: string };
+    monthly: {
+      label: string;
+      price: string;
+      rows: { label: string; detail: string; price: string }[];
+    };
+    ad_budget: { label: string; price: string; note: string };
+    terms: string;
+    calc: { monthly_total: number; ad_budget: number; default_job: number; note: string };
+  };
+  needs_heading: string;
+  needs_sub: string;
+  needs: { title: string; detail: string }[];
+  steps_heading: string;
+  steps: { title: string; detail: string }[];
+  note: string;
+  cta: { label: string; email: string; phone: string; phone_display: string };
 }
 
 export const SLIDE_LABELS = [

@@ -4,6 +4,7 @@ import { verifySession } from "@/lib/auth";
 import type { Proposal } from "@/lib/types";
 import AppShell from "@/components/layout/AppShell";
 import ProposalViewer from "@/components/proposal/ProposalViewer";
+import StoryProposal from "@/components/proposal/story/StoryProposal";
 
 export async function generateMetadata({
   params,
@@ -56,6 +57,21 @@ export default async function ProposalPage({
 
   const proposal = rows[0] as unknown as Proposal;
   const isPreview = proposal.status !== "published";
+
+  // Proposals that carry a `story` block use the animated story layout.
+  if (proposal.proposal_data.story) {
+    return (
+      <>
+        {isPreview && (
+          <div className="bg-[#f59e0b] text-black text-center text-sm font-ui tracking-wider px-4 py-2 relative z-50">
+            {proposal.status.toUpperCase()} PREVIEW. Only you can see this page. Publish it from the admin
+            proposals list before sending the link to {proposal.client_name}.
+          </div>
+        )}
+        <StoryProposal data={proposal.proposal_data} clientName={proposal.client_name} />
+      </>
+    );
+  }
 
   return (
     <AppShell>
