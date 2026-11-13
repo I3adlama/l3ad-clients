@@ -757,7 +757,7 @@
 .sp-track {
   display: flex;
   gap: 0.9rem;
-  align-items: flex-start;
+  align-items: center;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--sp-line);
   border-radius: 16px;
@@ -2292,7 +2292,7 @@
   height: 100%;
   display: flex;
   gap: 0.9rem;
-  align-items: flex-start;
+  align-items: center;
   background: var(--sp-inner);
   border: 1px solid var(--sp-line);
   border-radius: 18px;
@@ -2556,7 +2556,7 @@
   text-align: left;
   display: flex;
   gap: 1rem;
-  align-items: flex-start;
+  align-items: center;
   padding: 1.15rem 1.25rem;
   border-radius: 18px;
   border: 1px solid var(--sp-line);
@@ -2597,7 +2597,6 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  margin-top: 0.1rem;
   transition: background 0.25s, border-color 0.25s;
 }
 
