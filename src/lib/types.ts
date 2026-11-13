@@ -371,6 +371,9 @@ export interface StoryData {
   date: string;
   facts_heading: string;
   facts: {
+    icon?: string;
+    bars_caption?: string;
+    bars?: { label: string; value: number; display?: string; highlight?: boolean }[];
     value: number;
     prefix?: string;
     suffix?: string;
@@ -378,7 +381,7 @@ export interface StoryData {
     body: string;
     chips?: { value: string; label: string }[];
   }[];
-  facts_close: { title: string; body: string };
+  facts_close: { title: string; body: string; tracks?: { icon: string; title: string; body: string }[] };
   services_heading: string;
   services_sub: string;
   services: {
@@ -392,11 +395,21 @@ export interface StoryData {
     expect: string;
   }[];
   loop: { heading: string; body: string; steps: string[] };
+  /** Optional closer before pricing: the one strategic finding from our own measurements. */
+  key?: {
+    heading: string;
+    claim: string;
+    body: string;
+    stats: { value: string; label: string; source?: string }[];
+    moves: { icon: string; title: string; body: string }[];
+    footnote?: string;
+  };
   timeline_heading: string;
-  timeline: { when: string; title: string; points: string[] }[];
+  timeline: { when: string; title: string; points: string[]; icon?: string }[];
   timeline_note: string;
   proof_heading: string;
   proof: {
+    icon?: string;
     client: string;
     industry: string;
     stats: { value: string; label: string }[];
@@ -418,9 +431,9 @@ export interface StoryData {
   };
   needs_heading: string;
   needs_sub: string;
-  needs: { title: string; detail: string }[];
+  needs: { title: string; detail: string; icon?: string }[];
   steps_heading: string;
-  steps: { title: string; detail: string }[];
+  steps: { title: string; detail: string; icon?: string }[];
   note: string;
   cta: { label: string; email: string; phone: string; phone_display: string };
 }
